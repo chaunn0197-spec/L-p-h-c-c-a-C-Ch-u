@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIETNAM TOURISM ROUTE MASTER 3D - Sa bàn 34 Tỉnh Thành</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #061326;
+            color: #f8fafc;
+        }
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(10, 25, 47, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+        }
+        .glass-card {
+            background: rgba(15, 35, 65, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(56, 189, 248, 0.5);
+            background: rgba(20, 45, 82, 0.85);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 25, 47, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.8);
+        }
+        /* 3D Floating Label */
+        .province-label {
+            position: absolute;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            z-index: 5;
+            white-space: nowrap;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.95);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .island-label {
+            position: absolute;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            white-space: nowrap;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.95);
+        }
+        /* Pulse Animation for Active Hub */
+        @keyframes pulseRing {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+        .pulse-badge {
+            animation: pulseRing 2s infinite;
+        }
+        /* Equalizer Animation for Music Button */
+        @keyframes eqBar {
+            0%, 100% { height: 4px; }
+            50% { height: 14px; }
+        }
+        .eq-bar {
+            width: 3px;
+            background-color: #38bdf8;
+            border-radius: 2px;
+            display: inline-block;
+            margin: 0 1px;
+        }
+        .playing .eq-bar:nth-child(1) { animation: eqBar 0.7s infinite ease-in-out; }
+        .playing .eq-bar:nth-child(2) { animation: eqBar 0.5s infinite ease-in-out 0.2s; }
+        .playing .eq-bar:nth-child(3) { animation: eqBar 0.8s infinite ease-in-out 0.4s; }
+        /* Tour Guide Voice Wave Animation */
+        @keyframes voiceWave {
+            0%, 100% { transform: scaleY(0.35); }
+            50% { transform: scaleY(1.15); }
+        }
+        .voice-bar {
+            width: 3px;
+            height: 16px;
+            background: linear-gradient(to top, #38bdf8, #f472b6);
+            border-radius: 999px;
+            display: inline-block;
+            margin: 0 1.5px;
+            transform-origin: bottom;
+        }
+        .speaking .voice-bar:nth-child(1) { animation: voiceWave 0.55s infinite ease-in-out; }
+        .speaking .voice-bar:nth-child(2) { animation: voiceWave 0.4s infinite ease-in-out 0.15s; }
+        .speaking .voice-bar:nth-child(3) { animation: voiceWave 0.65s infinite ease-in-out 0.25s; }
+        .speaking .voice-bar:nth-child(4) { animation: voiceWave 0.45s infinite ease-in-out 0.1s; }
+    </style>
+</head>
+<body class="relative select-none">
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Floating HTML Labels Container -->
+    <div id="labels-container" class="absolute inset-0 pointer-events-none overflow-hidden z-10"></div>
+
+    <!-- Hover Tooltip -->
+    <div id="hover-tooltip" class="fixed pointer-events-none z-50 hidden glass-panel px-3.5 py-2.5 rounded-xl border border-cyan-400/50 shadow-2xl transition-opacity duration-150">
+        <div class="flex items-center gap-2">
+            <span id="tooltip-color" class="w-3 h-3 rounded-full inline-block border border-white"></span>
+            <span id="tooltip-name" class="font-bold text-sm text-white tracking-wide"></span>
+            <span id="tooltip-stamped" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-1.5 py-0.5 rounded hidden"><i class="fa-solid fa-stamp mr-1"></i>Đã đóng dấu</span>
+        </div>
+        <div id="tooltip-merged" class="text-[11px] text-cyan-200/90 mt-0.5"></div>
+        <div id="tooltip-hubs" class="text-[11px] text-amber-300/90 mt-0.5 font-medium"></div>
+    </div>
+
+    <!-- TOP NAVIGATION & CONTROL BAR -->
+    <header class="fixed top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 glass-panel px-4 py-2.5 rounded-2xl">
+        <!-- Brand & Title -->
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-red-500 to-rose-600 flex items-center justify-center shadow-lg shadow-red-500/20 border border-amber-300/40">
+                <i class="fa-solid fa-earth-asia text-white text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm md:text-base font-extrabold tracking-wider bg-gradient-to-r from-amber-300 via-cyan-200 to-emerald-300 bg-clip-text text-transparent">
+                        VIETNAM TOURISM ROUTE MASTER 3D
+                    </h1>
+                    <span class="hidden sm:inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                        Bản đồ 34 Tỉnh Thành
+                    </span>
+                </div>
+                <p class="text-[11px] text-slate-300 hidden md:block">
+                    Sa bàn Tương tác Tuyến điểm Du lịch Việt Nam • Di chuyển Đa phương thức & Hộ chiếu Di sản
+                </p>
+            </div>
+        </div>
+
+        <!-- Mode Switcher -->
+        <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700/70">
+            <button onclick="switchGameMode('explore')" id="mode-btn-explore" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-cyan-600 text-white shadow">
+                <i class="fa-solid fa-compass"></i>
+                <span>Khám phá & Lữ hành</span>
+            </button>
+            <button onclick="switchGameMode('challenge')" id="mode-btn-challenge" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+                <i class="fa-solid fa-route"></i>
+                <span>Thử thách Thiết kế Tuyến</span>
+            </button>
+            <button onclick="togglePassportModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-amber-300 hover:bg-amber-500/10">
+                <i class="fa-solid fa-passport"></i>
+                <span>Hộ chiếu (<span id="passport-count-top">0</span>/34)</span>
+            </button>
+        </div>
+
+        <!-- Audio & Camera Controls -->
+        <div class="flex items-center gap-2">
+            <!-- Music Synthesizer Control -->
+            <div class="flex items-center bg-slate-900/85 rounded-xl px-2.5 py-1 border border-slate-700/80 gap-2">
+                <button id="music-toggle-btn" onclick="toggleBackgroundMusic()" class="flex items-center gap-1.5 text-xs font-semibold text-cyan-300 hover:text-white py-1 px-1.5 rounded-lg transition" title="Bật/Tắt Nhạc nền Ngũ Cung">
+                    <i id="music-icon" class="fa-solid fa-volume-xmark text-slate-400"></i>
+                    <span id="music-status-text" class="hidden xl:inline">Nhạc nền: Tắt</span>
+                    <div id="music-eq" class="flex items-end h-3.5 ml-0.5">
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                    </div>
+                </button>
+                <select id="music-style-select" onchange="changeMusicStyle(this.value)" class="bg-slate-800 text-[11px] text-slate-200 rounded-lg px-2 py-1 border border-slate-600 focus:outline-none focus:border-cyan-400">
+                    <option value="pentatonic">🎵 Ngũ cung Du lịch (Đàn tranh)</option>
+                    <option value="journey">🚀 Giai điệu Hành trình Xuyên Việt</option>
+                    <option value="zen">🍃 Thanh âm Sinh thái (Ambient)</option>
+                </select>
+            </div>
+
+            <!-- Toggle Labels -->
+            <button onclick="toggleMapLabels()" id="btn-toggle-labels" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-cyan-300 border border-slate-600 text-xs flex items-center gap-1" title="Ẩn/Hiện tên 34 tỉnh trên bản đồ">
+                <i class="fa-solid fa-tags"></i>
+                <span class="hidden lg:inline">Nhãn tên</span>
+            </button>
+
+            <!-- Reset Camera -->
+            <button onclick="resetCameraOverview()" class="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/40 text-xs font-semibold flex items-center gap-1" title="Về góc nhìn Toàn cảnh Việt Nam">
+                <i class="fa-solid fa-expand"></i>
+                <span class="hidden lg:inline">Toàn cảnh</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- LEFT SIDEBAR: DIRECTORY OF 34 PROVINCES & ROUTE PLANNER -->
+    <aside id="left-sidebar" class="fixed top-20 left-3 bottom-3 w-80 md:w-88 z-20 flex flex-col gap-2.5 transition-transform duration-300">
+        
+        <!-- 1. INTER-PROVINCIAL TRAVEL & TRANSPORT CONTROLLER -->
+        <div class="glass-panel rounded-2xl p-3.5 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between border-b border-slate-700/70 pb-2">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-plane-departure text-cyan-400 text-sm"></i>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-300">Điều hành Di chuyển Liên tỉnh</h2>
+                </div>
+                <span id="current-location-badge" class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-medium">
+                    📍 Đang ở: Hà Nội
+                </span>
+            </div>
+
+            <!-- Origin & Destination Selectors -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Điểm xuất phát (Tỉnh A)</label>
+                    <select id="select-origin" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400"></select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Điểm đến tham quan (Tỉnh B)</label>
+                    <select id="select-destination" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-amber-300 font-semibold focus:outline-none focus:border-amber-400"></select>
+                </div>
+            </div>
+
+            <!-- Transport Mode Selection -->
+            <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+                <button onclick="setTransportMode('road')" id="trans-road" class="transport-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-cyan-400 bg-cyan-500/20 text-white flex flex-col items-center gap-0.5 transition">
+                    <i class="fa-solid fa-bus text-amber-300"></i>
+                    <span>Đường bộ</span>
+                </button>
+                <button onclick="setTransportMode('air')" id="trans-air" class="transport-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 flex flex-col items-center gap-0.5 transition hover:border-slate-500">
+                    <i class="fa-solid fa-plane text-sky-300"></i>
+                    <span>Hàng không</span>
+                </button>
+                <button onclick="setTransportMode('water')" id="trans-water" class="transport-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 flex flex-col items-center gap-0.5 transition hover:border-slate-500">
+                    <i class="fa-solid fa-ship text-emerald-300"></i>
+                    <span>Thủy / Sắt</span>
+                </button>
+            </div>
+
+            <!-- Action & Chase Cam Toggle -->
+            <div class="flex items-center gap-2 pt-1">
+                <button onclick="startJourneyFromUI()" class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs py-2 px-3 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center gap-1.5 transition transform active:scale-95">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Khởi hành Tham quan</span>
+                </button>
+                <button onclick="toggleChaseCamera()" id="btn-chase-cam" class="px-2.5 py-2 rounded-xl border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium hover:border-cyan-400 transition" title="Bật/Tắt Camera đi theo phương tiện 3D">
+                    <i class="fa-solid fa-video mr-1"></i>Cam hành trình
+                </button>
+            </div>
+
+            <!-- Active Telemetry Status Bar (Shown during travel) -->
+            <div id="journey-telemetry" class="hidden bg-slate-950/90 border border-amber-500/40 rounded-xl p-2.5 text-xs">
+                <div class="flex items-center justify-between text-amber-300 font-bold mb-1">
+                    <span id="telemetry-route">Hà Nội ➔ Quảng Ninh</span>
+                    <span id="telemetry-dist">155 km</span>
+                </div>
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1">
+                    <div id="telemetry-progress" class="bg-gradient-to-r from-cyan-400 to-amber-400 h-full w-0 transition-all duration-75"></div>
+                </div>
+                <div id="telemetry-status" class="text-[11px] text-slate-300 italic">Đang di chuyển trên cao tốc...</div>
+            </div>
+        </div>
+
+        <!-- 2. DIRECTORY OF 34 PROVINCES & REGIONS -->
+        <div class="glass-panel rounded-2xl p-3.5 flex-1 flex flex-col min-h-0">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span>Danh mục 34 Tỉnh / Thành</span>
+                </h2>
+                <span class="text-[11px] text-slate-400" id="filtered-count">34 đơn vị</span>
+            </div>
+
+            <!-- Search & Region Filter -->
+            <div class="flex flex-col gap-1.5 mb-2.5">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-400 text-xs"></i>
+                    <input id="search-province" type="text" oninput="filterProvinceList()" placeholder="Tìm tỉnh mới, tỉnh cũ (VD: Hà Giang, Cát Bà)..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400">
+                </div>
+                <select id="filter-region" onchange="filterProvinceList()" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-400">
+                    <option value="ALL">🌏 Tất cả 6 Vùng Du lịch (34 Tỉnh/Thành)</option>
+                    <option value="V1">⛰️ Vùng 1: Trung du & Miền núi phía Bắc (10)</option>
+                    <option value="V2">🏯 Vùng 2: Đồng bằng sông Hồng (5)</option>
+                    <option value="V3">🏖️ Vùng 3: Bắc Trung Bộ & Duyên hải Miền Trung (8)</option>
+                    <option value="V4">🌲 Vùng 4: Tây Nguyên - Nam Trung Bộ mở rộng (3)</option>
+                    <option value="V5">🏙️ Vùng 5: Đông Nam Bộ (3)</option>
+                    <option value="V6">🛶 Vùng 6: Đồng bằng sông Cửu Long (5)</option>
+                </select>
+            </div>
+
+            <!-- Scrollable List of 34 Provinces -->
+            <div id="province-list-container" class="flex-1 overflow-y-auto space-y-1.5 pr-1"></div>
+
+            <!-- Reference Map Color Legend -->
+            <div class="pt-2 mt-2 border-t border-slate-700/70 flex items-center justify-between text-[10px] text-slate-300">
+                <span>Bảng màu Bản đồ mẫu:</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#F5C71A] inline-block" title="Vàng"></span>
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#F05A22] inline-block" title="Cam đỏ"></span>
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#2CE5C3] inline-block" title="Xanh ngọc"></span>
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#10B981] inline-block" title="Xanh lá"></span>
+                    <span class="w-2.5 h-2.5 rounded-sm bg-[#0047BA] inline-block" title="Xanh dương đậm"></span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- RIGHT SIDEBAR: DOSSIER & TOUR GUIDE PANEL -->
+    <aside id="right-sidebar" class="fixed top-20 right-3 bottom-20 w-88 md:w-96 z-20 flex flex-col glass-panel rounded-2xl overflow-hidden shadow-2xl border border-cyan-400/40">
+        <!-- Dossier Header -->
+        <div class="p-3.5 bg-gradient-to-r from-cyan-950 via-slate-900 to-indigo-950 border-b border-slate-700/80">
+            <div class="flex items-center justify-between mb-1">
+                <span id="dossier-code-badge" class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded text-slate-950" style="background:#2CE5C3">ĐƠN VỊ 09/34</span>
+                <span id="dossier-region-badge" class="text-[10px] text-cyan-300 font-semibold">Đông Bắc & Duyên hải Bắc Bộ</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <h2 id="dossier-title" class="text-base font-black text-white tracking-wide flex items-center gap-2">
+                    <span>QUẢNG NINH</span>
+                </h2>
+                <button onclick="travelToSelectedProvince()" class="px-2.5 py-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow flex items-center gap-1 transition">
+                    <i class="fa-solid fa-plane-departure"></i>
+                    <span>Bay tới đây</span>
+                </button>
+            </div>
+            <div id="dossier-merged" class="text-[11px] text-amber-300 mt-1 font-medium">Giữ nguyên (Tỉnh Quảng Ninh)</div>
+        </div>
+
+        <!-- Hubs Bar -->
+        <div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center gap-1.5" id="dossier-hubs-list"></div>
+
+        <!-- Dossier Navigation Tabs -->
+        <div class="grid grid-cols-4 text-xs font-semibold bg-slate-950/80 border-b border-slate-800">
+            <button onclick="switchDossierTab('attractions')" id="dtab-attractions" class="py-2.5 text-center border-b-2 border-cyan-400 text-cyan-300 transition">Điểm đến</button>
+            <button onclick="switchDossierTab('overview')" id="dtab-overview" class="py-2.5 text-center border-b-2 border-transparent text-slate-400 hover:text-white transition">Tổng quan</button>
+            <button onclick="switchDossierTab('cuisine')" id="dtab-cuisine" class="py-2.5 text-center border-b-2 border-transparent text-slate-400 hover:text-white transition">Ẩm thực</button>
+            <button onclick="switchDossierTab('quiz')" id="dtab-quiz" class="py-2.5 text-center border-b-2 border-transparent text-slate-400 hover:text-white transition">Nhận dấu</button>
+        </div>
+
+        <!-- Dossier Content Body -->
+        <div id="dossier-content" class="flex-1 overflow-y-auto p-3.5 space-y-3"></div>
+
+        <!-- Dossier Footer: Audio Guide (Thuyết minh tự động Giọng Nữ Miền Bắc) -->
+        <div class="p-3 bg-slate-950/95 border-t border-slate-800 flex flex-col gap-2">
+            <!-- Voice Settings Bar -->
+            <div class="flex items-center justify-between gap-1.5 text-[11px] bg-slate-900/90 px-2.5 py-1.5 rounded-xl border border-slate-700/80">
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                    <i class="fa-solid fa-headset text-pink-400 shrink-0"></i>
+                    <select id="voice-engine-select" onchange="changeVoiceEngine(this.value)" class="bg-transparent text-pink-200 font-semibold focus:outline-none truncate w-full cursor-pointer" title="Chọn Giọng Nữ Hướng dẫn viên Miền Bắc">
+                        <option value="auto_northern" class="bg-slate-900 text-white">🎙️ Nữ HDV Miền Bắc (Hoài My / Chuẩn Hà Nội)</option>
+                        <option value="cloud_northern" class="bg-slate-900 text-white">☁️ Nữ HDV Miền Bắc (Cloud Tiêu Chuẩn)</option>
+                        <option value="browser_female" class="bg-slate-900 text-white">🔊 Nữ HDV Hệ thống (Web Speech Nữ)</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <select id="voice-speed-select" onchange="changeVoiceSpeed(this.value)" class="bg-slate-800 text-cyan-300 font-bold px-1.5 py-0.5 rounded border border-slate-600 focus:outline-none text-[10px]" title="Tốc độ đọc thuyết minh">
+                        <option value="0.92">0.9x (Rõ từng chữ)</option>
+                        <option value="0.98" selected>1.0x (Chuẩn HDV)</option>
+                        <option value="1.06">1.1x (Linh hoạt)</option>
+                    </select>
+                    <label class="flex items-center gap-1 cursor-pointer text-[10px] text-slate-300 hover:text-white" title="Tự động thuyết minh khi phương tiện di chuyển đến tỉnh mới">
+                        <input type="checkbox" id="auto-narrate-toggle" checked onchange="toggleAutoNarrate(this.checked)" class="accent-pink-500 rounded cursor-pointer">
+                        <span>Tự động</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between gap-2">
+                <button onclick="speakProvinceGuide()" id="btn-voice-guide" class="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-pink-600/90 to-cyan-600/90 hover:from-pink-500 hover:to-cyan-500 border border-pink-400/40 text-xs font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-pink-500/10 transition">
+                    <i id="voice-guide-icon" class="fa-solid fa-microphone-lines"></i>
+                    <span id="voice-guide-label">Thuyết minh (Nữ HDV Miền Bắc)</span>
+                </button>
+                <button onclick="stopTourGuideVoice()" id="btn-voice-stop" class="hidden py-2 px-2.5 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 border border-rose-400/50 text-rose-200 text-xs font-bold transition" title="Dừng thuyết minh">
+                    <i class="fa-solid fa-stop"></i>
+                </button>
+                <button onclick="switchDossierTab('quiz')" class="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold transition shrink-0">
+                    <i class="fa-solid fa-award mr-1"></i>Nhận dấu
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- LIVE TOUR GUIDE AVATAR & SUBTITLE WIDGET (Hiển thị khi Nữ HDV đang thuyết minh) -->
+    <div id="tour-guide-subtitle-box" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 hidden glass-panel rounded-2xl p-3.5 w-[660px] max-w-[92vw] border border-pink-400/50 shadow-2xl transition-all duration-300">
+        <div class="flex items-start gap-3">
+            <!-- Female Tour Guide Avatar Badge -->
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-pink-500 via-rose-500 to-amber-500 flex flex-col items-center justify-center shrink-0 border border-pink-200/60 shadow-lg relative">
+                <i class="fa-solid fa-user-tie text-white text-lg"></i>
+                <span class="text-[8px] font-extrabold uppercase bg-slate-950/90 text-pink-300 px-1 rounded mt-0.5">HDV Nữ</span>
+            </div>
+            <!-- Subtitle Text & Progress -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-extrabold text-pink-300 tracking-wide">NỮ HƯỚNG DẪN VIÊN DU LỊCH (GIỌNG BẮC CHUẨN)</span>
+                        <span id="guide-voice-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-400/30 font-semibold">Chuẩn Hà Nội</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div id="guide-wave-indicator" class="speaking flex items-end h-4">
+                            <span class="voice-bar"></span>
+                            <span class="voice-bar"></span>
+                            <span class="voice-bar"></span>
+                            <span class="voice-bar"></span>
+                        </div>
+                        <button onclick="stopTourGuideVoice()" class="text-slate-400 hover:text-rose-400 text-xs px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700" title="Tắt thuyết minh">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+                <p id="tour-guide-subtitle-text" class="text-xs md:text-sm text-white font-medium leading-relaxed bg-slate-950/75 px-3 py-2 rounded-xl border border-slate-800/90"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOUR BUILDER CHALLENGE FLOATING BAR (Hidden in Explore Mode) -->
+    <div id="challenge-panel" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 hidden glass-panel rounded-2xl p-4 w-[620px] max-w-[94vw] border-2 border-amber-400/60 shadow-2xl">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-extrabold text-[11px]">NHIỆM VỤ ĐIỀU HÀNH TOUR</span>
+                <h3 id="challenge-title" class="text-sm font-bold text-white">Thiết kế Hành trình Liên vùng</h3>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="nextTourChallenge()" class="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-1 rounded-lg border border-slate-600">
+                    Đổi đề bài <i class="fa-solid fa-rotate ml-1"></i>
+                </button>
+                <button onclick="switchGameMode('explore')" class="text-slate-400 hover:text-white px-1.5">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <p id="challenge-desc" class="text-xs text-slate-200 mb-2.5"></p>
+        <div class="flex items-center justify-between gap-2 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <div id="challenge-steps" class="flex flex-wrap items-center gap-1.5 text-xs"></div>
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button onclick="clearChallengeSelection()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700">Xóa</button>
+                <button onclick="verifyTourChallenge()" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs">Chấm điểm Tuyến</button>
+            </div>
+        </div>
+        <div id="challenge-feedback" class="mt-2 text-xs font-semibold hidden"></div>
+    </div>
+
+    <!-- PASSPORT MODAL (HỘ CHIẾU DI SẢN 34 TỈNH THÀNH) -->
+    <div id="passport-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl max-w-4xl w-full max-h-[88vh] flex flex-col overflow-hidden border border-amber-400/40">
+            <div class="p-5 bg-gradient-to-r from-amber-900/40 via-slate-900 to-cyan-900/40 border-b border-slate-700 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-300 text-2xl">
+                        <i class="fa-solid fa-passport"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-extrabold text-white tracking-wide">HỘ CHIẾU DI SẢN DU LỊCH 34 TỈNH THÀNH</h2>
+                        <p class="text-xs text-slate-300">Hoàn thành câu hỏi nghiệp vụ tại mỗi tỉnh để thu thập trọn bộ 34 con dấu</p>
+                    </div>
+                </div>
+                <button onclick="togglePassportModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-900/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4 text-xs">
+                    <div><span class="text-slate-400">Tiến độ:</span> <strong id="passport-modal-progress" class="text-amber-300 text-sm">0 / 34 Tỉnh</strong></div>
+                    <div><span class="text-slate-400">Danh hiệu:</span> <strong id="passport-rank" class="text-cyan-300">Hướng dẫn viên Tập sự</strong></div>
+                </div>
+                <button onclick="unlockAllStampsDemo()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-1.5 rounded-lg border border-amber-400/30">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Mở khóa mẫu 34 dấu (Giảng viên trình chiếu)
+                </button>
+            </div>
+            <div id="passport-grid" class="p-5 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5"></div>
+        </div>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT -->
+    <script>
+        /***********************************************************************
+         * 1. COMPLETE DATASET OF 34 PROVINCES & ARCHIPELAGOS (MATCHING PDF MAP)
+         * Coordinates (x, z): x is West(-) to East(+), z is North(-) to South(+)
+         ***********************************************************************/
+        const PROVINCES_34 = [
+            // ================= VÙNG 1: TRUNG DU & MIỀN NÚI PHÍA BẮC (10) =================
+            {
+                id: "VN-01", stt: 1, name: "Cao Bằng",
+                mergedFrom: "Giữ nguyên (Tỉnh Cao Bằng)",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#F5C71A",
+                x: 4.5, z: -43.5,
+                polygon: [[2.5,-46.0],[6.8,-45.5],[7.8,-42.5],[5.2,-41.2],[2.0,-42.0]],
+                hubs: [{ name: "Cao Bằng", x: 4.8, z: -43.2 }],
+                landmarkType: "waterfall",
+                transport: ["Đường bộ: QL3, QL4A, Cao tốc Đồng Đăng - Trà Lĩnh", "Cửa khẩu Quốc tế Tà Lùng, Sóc Giang"],
+                attractions: [
+                    { name: "Thác Bản Giốc & Động Ngườm Ngao", cluster: "Cụm Biên giới Trùng Khánh", desc: "Thác nước tự nhiên lớn nhất Đông Nam Á nằm trên biên giới Việt - Trung và hệ thống hang động đá vôi kỳ vĩ." },
+                    { name: "Khu di tích Quốc gia đặc biệt Pác Bó", cluster: "Cụm Lịch sử Hà Quảng", desc: "Nơi Chủ tịch Hồ Chí Minh trở về Tổ quốc năm 1941 với Suối Lê-nin, Núi Các Mác, Hang Cốc Bó." },
+                    { name: "Công viên Địa chất Toàn cầu UNESCO Non nước Cao Bằng", cluster: "Cụm Sinh thái - Địa chất", desc: "Di sản địa chất hơn 500 triệu năm, nổi bật với Mắt Thần Núi, Hồ Thang Hen và Làng đá cổ Khuổi Ky." }
+                ],
+                cuisine: ["Bánh cuốn canh Cao Bằng", "Vịt quay 7 vị", "Hạt dẻ Trùng Khánh", "Phở chua", "Thạch đen Cao Bằng"],
+                routeAdvice: "Kết nối kinh điển theo Vòng cung Đông Bắc: Thái Nguyên (Hồ Ba Bể) ➔ Cao Bằng (Pác Bó - Bản Giốc) ➔ Lạng Sơn.",
+                quiz: {
+                    q: "Danh thắng nào của tỉnh Cao Bằng nằm trong vùng lõi Công viên Địa chất Toàn cầu UNESCO và là thác nước tự nhiên lớn nhất Đông Nam Á?",
+                    options: ["Thác Bản Giốc", "Thác Dải Yếm", "Thác Đầu Đẳng", "Thác Khe Kèm"],
+                    ans: 0,
+                    explain: "Thác Bản Giốc (huyện Trùng Khánh, Cao Bằng) là thác nước tự nhiên lớn nhất Đông Nam Á."
+                }
+            },
+            {
+                id: "VN-02", stt: 2, name: "Tuyên Quang",
+                mergedFrom: "Hợp nhất Tuyên Quang + Hà Giang",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#F05A22",
+                x: -0.8, z: -41.5,
+                polygon: [[-3.5,-47.5],[1.2,-47.0],[2.3,-43.0],[1.8,-36.5],[-1.5,-36.2],[-3.2,-41.5]],
+                hubs: [
+                    { name: "Hà Giang", x: -1.6, z: -44.8 },
+                    { name: "Tuyên Quang", x: -0.2, z: -38.0 }
+                ],
+                landmarkType: "flagpole",
+                transport: ["Đường bộ: Cao tốc Tuyên Quang - Phú Thọ - Hà Giang, QL2, QL4C (Đường Hạnh Phúc)"],
+                attractions: [
+                    { name: "Cao nguyên đá Đồng Văn & Cột cờ Lũng Cú", cluster: "Cụm Cực Bắc (Hà Giang)", desc: "Công viên Địa chất Toàn cầu UNESCO với Cột cờ Lũng Cú, Dinh thự Vua Mèo và Phố cổ Đồng Văn." },
+                    { name: "Đèo Mã Pí Lèng & Hẻm vực Tu Sản - Sông Nho Quế", cluster: "Cụm Đèo cao & Sông", desc: "Một trong 'Tứ đại đỉnh đèo' nhìn xuống dòng sông Nho Quế xanh ngọc bích và hẻm vực sâu nhất Đông Nam Á." },
+                    { name: "Khu di tích Quốc gia đặc biệt Tân Trào & Hồ Na Hang", cluster: "Cụm Thủ đô Kháng chiến & Sinh thái (Tuyên Quang)", desc: "Cây đa Tân Trào, Lán Nà Nưa, Đình Tân Trào và khu bảo tồn thiên nhiên Na Hang - Lâm Bình." }
+                ],
+                cuisine: ["Thắng cố Đồng Văn", "Cháo ấu tẩu", "Cá lăng sông Gâm", "Cam sành Hàm Yên", "Bánh cuốn trứng Hà Giang"],
+                routeAdvice: "Tuyến liên kết 'Từ Thủ đô Kháng chiến Tân Trào lên Cực Bắc Lũng Cú' tạo ra sản phẩm kết hợp giáo dục lịch sử và khám phá địa chất độc nhất.",
+                quiz: {
+                    q: "Sau khi hợp nhất Tuyên Quang và Hà Giang, tuyến du lịch nội tỉnh kết nối hai di sản/danh thắng tiêu biểu nào sau đây?",
+                    options: [
+                        "Khu di tích Tân Trào - Cao nguyên đá Đồng Văn (Lũng Cú)",
+                        "Đền Hùng - Vịnh Hạ Long",
+                        "Mù Cang Chải - Đỉnh Mẫu Sơn",
+                        "Hồ Ba Bể - Thác Bản Giốc"
+                    ],
+                    ans: 0,
+                    explain: "Tỉnh Tuyên Quang mới hội tụ cả Khu di tích Quốc gia đặc biệt Tân Trào và Cao nguyên đá Đồng Văn - Cột cờ Lũng Cú."
+                }
+            },
+            {
+                id: "VN-03", stt: 3, name: "Lào Cai",
+                mergedFrom: "Hợp nhất Lào Cai + Yên Bái",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#2CE5C3",
+                x: -5.8, z: -39.5,
+                polygon: [[-9.2,-43.5],[-3.8,-43.0],[-2.0,-36.8],[-5.5,-35.2],[-9.0,-38.0]],
+                hubs: [
+                    { name: "Lào Cai", x: -6.8, z: -41.5 },
+                    { name: "Yên Bái", x: -4.5, z: -37.2 }
+                ],
+                landmarkType: "mountain_peak",
+                transport: ["Cao tốc Nội Bài - Lào Cai", "Đường sắt Hà Nội - Lào Cai", "Cửa khẩu Quốc tế Lào Cai"],
+                attractions: [
+                    { name: "Khu du lịch Quốc gia Sa Pa & Đỉnh Fansipan", cluster: "Cụm Hoàng Liên Sơn (Lào Cai)", desc: "Nóc nhà Đông Dương (3.143m) với hệ thống cáp treo hiện đại, Bản Cát Cát, Thung lũng Mường Hoa và Đèo Ô Quy Hồ." },
+                    { name: "Ruộng bậc thang Mù Cang Chải & Đèo Khau Phạ", cluster: "Cụm Di sản Danh thắng Quốc gia đặc biệt (Yên Bái)", desc: "Kiệt tác canh tác của người Mông trên sườn núi cao, mùa nước đổ và mùa lúa chín vàng rực rỡ." },
+                    { name: "Hồ Thác Bà, Suối Giàng & Cao nguyên Bắc Hà", cluster: "Cụm Sinh thái & Văn hóa", desc: "Chợ phiên Bắc Hà, Dinh Hoàng A Tưởng, trà Shan tuyết cổ thụ Suối Giàng và cánh đồng Mường Lò (Nghĩa Lộ)." }
+                ],
+                cuisine: ["Cá hồi & Cá tầm Sa Pa", "Thắng cố Bắc Hà", "Xôi ngũ sắc & Cốm Tú Lệ", "Trà Shan tuyết Suối Giàng"],
+                routeAdvice: "Trục vàng Tây Bắc dọc Cao tốc Nội Bài - Lào Cai kết hợp QL32: Nghĩa Lộ ➔ Tú Lệ ➔ Mù Cang Chải ➔ Đèo Ô Quy Hồ ➔ Sa Pa.",
+                quiz: {
+                    q: "Khi du khách đi tuyến Mù Cang Chải - Sa Pa trong địa phận tỉnh Lào Cai mới, hai đèo lớn thuộc 'Tứ đại đỉnh đèo' nằm trên hành trình này là gì?",
+                    options: [
+                        "Đèo Khau Phạ và Đèo Ô Quy Hồ",
+                        "Đèo Mã Pí Lèng và Đèo Hải Vân",
+                        "Đèo Pha Đin và Đèo Ngang",
+                        "Đèo Cả và Đèo Ngoạn Mục"
+                    ],
+                    ans: 0,
+                    explain: "Đèo Khau Phạ (Mù Cang Chải) và Đèo Ô Quy Hồ (ranh giới Sa Pa - Lai Châu) là 2 trong Tứ đại đỉnh đèo Tây Bắc."
+                }
+            },
+            {
+                id: "VN-04", stt: 4, name: "Lai Châu",
+                mergedFrom: "Giữ nguyên (Tỉnh Lai Châu)",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#F59E0B",
+                x: -11.5, z: -41.5,
+                polygon: [[-14.5,-44.0],[-9.5,-43.5],[-9.2,-38.5],[-13.5,-39.0]],
+                hubs: [{ name: "Lai Châu", x: -11.2, z: -41.2 }],
+                landmarkType: "mountain_peak",
+                transport: ["Đường bộ: QL4D, QL12, Tuyến nối Cao tốc Nội Bài - Lào Cai"],
+                attractions: [
+                    { name: "Khu du lịch Cầu kính Rồng Mây & Đỉnh Ô Quy Hồ", cluster: "Cụm Đèo cao Tam Đường", desc: "Hệ thống thang máy trong lòng núi đá và cầu kính vươn ra từ vách núi ở độ cao trên 2.200m." },
+                    { name: "Cao nguyên Sìn Hồ & Bản Sin Suối Hồ", cluster: "Cụm Du lịch Cộng đồng ASEAN", desc: "Bản du lịch cộng đồng người Mông tiêu biểu với hoa địa lan, thác Trái Tim và biển mây Sìn Hồ." },
+                    { name: "Quần thể các đỉnh núi cao: Pu Ta Leng, Pu Si Lung", cluster: "Cụm Trekking Mạo hiểm", desc: "Thiên đường leo núi khám phá rừng đỗ quyên cổ thụ trên những đỉnh núi cao trên 3.000m." }
+                ],
+                cuisine: ["Lợn cắp nách Lai Châu", "Cá bống vùi tro", "Xôi tím Sìn Hồ", "Rêu đá nướng", "Mắc khén - Hạt dổi"],
+                routeAdvice: "Kết nối trực tiếp với Sa Pa (Lào Cai) qua đèo Ô Quy Hồ và xuống Điện Biên Phủ qua QL12.",
+                quiz: {
+                    q: "Bản du lịch cộng đồng nào tại Lai Châu nổi tiếng với cảnh quan sạch đẹp, nghề trồng địa lan và từng đạt Giải thưởng Du lịch Cộng đồng ASEAN?",
+                    options: ["Bản Sin Suối Hồ", "Bản Lác", "Bản Cát Cát", "Bản Đôn"],
+                    ans: 0,
+                    explain: "Bản Sin Suối Hồ (huyện Phong Thổ, Lai Châu) là điểm sáng về du lịch cộng đồng vùng Tây Bắc."
+                }
+            },
+            {
+                id: "VN-05", stt: 5, name: "Điện Biên",
+                mergedFrom: "Giữ nguyên (Tỉnh Điện Biên)",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#EA580C",
+                x: -12.8, z: -36.0,
+                polygon: [[-15.5,-39.0],[-10.2,-38.5],[-9.8,-33.2],[-14.5,-33.5]],
+                hubs: [{ name: "Điện Biên Phủ", x: -12.8, z: -36.2 }],
+                landmarkType: "monument",
+                transport: ["Đường hàng không: Sân bay Điện Biên", "Đường bộ: QL6 (qua Đèo Pha Đin), QL12, Cửa khẩu Quốc tế Tây Trang"],
+                attractions: [
+                    { name: "Di tích Quốc gia đặc biệt Chiến trường Điện Biên Phủ", cluster: "Cụm Lịch sử Cách mạng", desc: "Đồi A1, Hầm Đờ Cát, Tượng đài Chiến thắng Điện Biên Phủ, Bảo tàng Chiến thắng lịch sử Điện Biên Phủ và Sở chỉ huy Mường Phăng." },
+                    { name: "Cực Tây A Pa Chải (Mường Nhé)", cluster: "Cụm Biên giới", desc: "Cột mốc ngã ba biên giới Việt Nam - Lào - Trung Quốc, nơi 'một con gà gáy ba nước cùng nghe'." },
+                    { name: "Đèo Pha Đin, Hồ Pá Khoang & Thành Bản Phủ", cluster: "Cụm Sinh thái & Văn hóa Thái", desc: "Thung lũng Mường Thanh trù phú, mùa hoa Ban trắng tháng 3 và văn hóa dân tộc Thái." }
+                ],
+                cuisine: ["Gà nướng mắc khén", "Xôi nếp nương Điện Biên", "Pa Pỉnh Tộp", "Chẩm chéo", "Thịt trâu gác bếp"],
+                routeAdvice: "Có thể kết hợp đường bay thẳng từ Hà Nội/TP.HCM lên Điện Biên rồi đi đường bộ khảo sát Sơn La - Mộc Châu.",
+                quiz: {
+                    q: "Sở chỉ huy Chiến dịch Điện Biên Phủ của Đại tướng Võ Nguyên Giáp đặt tại địa danh nào?",
+                    options: ["Rừng Mường Phăng", "Tân Trào", "Pác Bó", "Định Hóa"],
+                    ans: 0,
+                    explain: "Sở chỉ huy chiến dịch Điện Biên Phủ được đặt tại khu rừng Mường Phăng (TP. Điện Biên Phủ)."
+                }
+            },
+            {
+                id: "VN-06", stt: 6, name: "Sơn La",
+                mergedFrom: "Giữ nguyên (Tỉnh Sơn La)",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#0047BA",
+                x: -7.5, z: -34.2,
+                polygon: [[-10.2,-37.5],[-5.0,-36.0],[-3.8,-31.8],[-9.5,-32.5]],
+                hubs: [{ name: "Sơn La", x: -7.8, z: -34.5 }],
+                landmarkType: "tea_hills",
+                transport: ["Đường bộ: Quốc lộ 6, Cao tốc Hòa Bình - Mộc Châu - Sơn La"],
+                attractions: [
+                    { name: "Khu du lịch Quốc gia Mộc Châu", cluster: "Cụm Cao nguyên Mộc Châu", desc: "Đồi chè Trái Tim, Rừng thông Bản Áng, Thác Dải Yếm, Cầu kính Bạch Long (dài nhất thế giới) và thung lũng mận Nà Ka." },
+                    { name: "Thiên đường săn mây Tà Xùa & Ngọc Chiến", cluster: "Cụm Bắc Yên - Mường La", desc: "Sống lưng khủng long Tà Xùa, thảo nguyên Tà Xùa và bản khoáng nóng Ngọc Chiến." },
+                    { name: "Di tích Quốc gia đặc biệt Nhà tù Sơn La & Lòng hồ Quỳnh Nhai", cluster: "Cụm TP. Sơn La & Sông Đà", desc: "Cây đào Tô Hiệu lịch sử, Thủy điện Sơn La và vùng lòng hồ sông Đà hùng vĩ." }
+                ],
+                cuisine: ["Bê chao Mộc Châu", "Sữa tươi & Bánh sữa Mộc Châu", "Cá nướng sông Đà", "Mận hậu & Dâu tây Mộc Châu"],
+                routeAdvice: "Cửa ngõ vàng của vòng cung Tây Bắc trên trục Quốc lộ 6, đặc biệt hút khách mùa hoa mận, hoa mơ (tháng 1-2) và mùa mận chín (tháng 5).",
+                quiz: {
+                    q: "Cầu kính Bạch Long đạt kỷ lục Guinness về độ dài đường đi bộ bằng kính nằm tại khu du lịch quốc gia nào của tỉnh Sơn La?",
+                    options: ["Khu du lịch Quốc gia Mộc Châu", "Khu du lịch Tà Xùa", "Lòng hồ Quỳnh Nhai", "Khu di tích Nhà tù Sơn La"],
+                    ans: 0,
+                    explain: "Cầu kính Bạch Long nằm tại xã Mường Sang, thuộc Khu du lịch Quốc gia Mộc Châu, tỉnh Sơn La."
+                }
+            },
+            {
+                id: "VN-07", stt: 7, name: "Thái Nguyên",
+                mergedFrom: "Hợp nhất Thái Nguyên + Bắc Kạn",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#10B981",
+                x: 2.2, z: -38.5,
+                polygon: [[0.5,-42.5],[4.2,-42.0],[4.5,-35.2],[0.8,-35.5]],
+                hubs: [
+                    { name: "Bắc Kạn", x: 2.5, z: -40.8 },
+                    { name: "Thái Nguyên", x: 2.2, z: -36.5 }
+                ],
+                landmarkType: "tea_hills",
+                transport: ["Đường bộ: Cao tốc Hà Nội - Thái Nguyên - Bắc Kạn - Cao Bằng, QL3"],
+                attractions: [
+                    { name: "Vườn Quốc gia & Danh thắng Hồ Ba Bể", cluster: "Cụm Sinh thái Bắc Kạn", desc: "Một trong 20 hồ nước ngọt tự nhiên đặc biệt của thế giới (Khu Ramsar) với Động Puông, Ao Tiên, Đảo Bà Góa và Thác Đầu Đẳng." },
+                    { name: "Khu du lịch Hồ Núi Cốc & Không gian Văn hóa Trà Tân Cương", cluster: "Cụm Thái Nguyên", desc: "Đồi chè Tân Cương ('Đệ nhất danh trà'), Hồ Núi Cốc huyền thoại và Bảo tàng Văn hóa các dân tộc Việt Nam." },
+                    { name: "Khu di tích Quốc gia đặc biệt ATK Định Hóa", cluster: "Cụm Lịch sử Chiến khu Việt Bắc", desc: "Nơi ở và làm việc của Chủ tịch Hồ Chí Minh cùng Trung ương Đảng trong kháng chiến chống Pháp." }
+                ],
+                cuisine: ["Trà Tân Cương Thái Nguyên", "Bánh ngải", "Cá nướng Pác Ngòi (Ba Bể)", "Tôm cuốn Thừa Lâm", "Cơm lam Định Hóa"],
+                routeAdvice: "Sự kết hợp Thái Nguyên + Bắc Kạn tạo thành tuyến hoàn chỉnh: Văn hóa Trà Tân Cương ➔ Lịch sử ATK Định Hóa ➔ Sinh thái Hồ Ba Bể.",
+                quiz: {
+                    q: "Danh thắng tự nhiên nổi tiếng nào thuộc tỉnh Thái Nguyên mới (địa phận Bắc Kạn cũ) là một trong 20 hồ nước ngọt tự nhiên lớn và đẹp của thế giới?",
+                    options: ["Hồ Ba Bể", "Hồ Núi Cốc", "Hồ Thác Bà", "Hồ Đại Lải"],
+                    ans: 0,
+                    explain: "Hồ Ba Bể là hồ nước ngọt tự nhiên trên núi đá vôi đặc sắc bậc nhất Việt Nam, đã được công nhận là Khu Ramsar."
+                }
+            },
+            {
+                id: "VN-08", stt: 8, name: "Lạng Sơn",
+                mergedFrom: "Giữ nguyên (Tỉnh Lạng Sơn)",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#0047BA",
+                x: 6.2, z: -38.0,
+                polygon: [[4.3,-41.0],[8.5,-40.0],[8.8,-36.0],[4.6,-36.2]],
+                hubs: [{ name: "Lạng Sơn", x: 6.4, z: -38.2 }],
+                landmarkType: "citadel",
+                transport: ["Cao tốc Bắc Giang - Lạng Sơn - Hữu Nghị", "Đường sắt Quốc tế Liên vận Hà Nội - Đồng Đăng", "Cửa khẩu Quốc tế Hữu Nghị"],
+                attractions: [
+                    { name: "Quần thể Nhị Thanh - Tam Thanh - Thành Nhà Mạc - Tô Thị", cluster: "Cụm TP. Lạng Sơn", desc: "Chùa trong hang đá Tam Thanh, tượng nàng Tô Thị bồng con và dấu ấn lịch sử Thành Nhà Mạc." },
+                    { name: "Khu du lịch Quốc gia Mẫu Sơn", cluster: "Cụm Nghỉ dưỡng Núi cao", desc: "Đỉnh núi cao hơn 1.500m quanh năm mây phủ, nổi tiếng với hiện tượng băng giá mùa đông và kiến trúc biệt thự cổ." },
+                    { name: "Công viên Địa chất Toàn cầu UNESCO Lạng Sơn & Ải Chi Lăng", cluster: "Cụm Địa chất & Lịch sử", desc: "Thung lũng Bắc Sơn, Hố sụt Kong Collapse và Ải Chi Lăng hào hùng." }
+                ],
+                cuisine: ["Vịt quay Lạng Sơn (lá mắc mật)", "Khâu nhục", "Phở chua Lạng Sơn", "Na Chi Lăng", "Đào Mẫu Sơn"],
+                routeAdvice: "Điểm trung chuyển thương mại và du lịch biên giới trọng yếu kết nối Hà Nội - Bắc Ninh với Trung Quốc và Quảng Ninh (qua QL4B).",
+                quiz: {
+                    q: "Đỉnh núi nào tại Lạng Sơn có độ cao trên 1.500m, nổi tiếng là điểm săn băng tuyết vào mùa đông ở miền Bắc?",
+                    options: ["Đỉnh Mẫu Sơn", "Đỉnh Yên Tử", "Đỉnh Tam Đảo", "Đỉnh Ba Vì"],
+                    ans: 0,
+                    explain: "Đỉnh Mẫu Sơn (Lạng Sơn) là nơi thường xuyên xuất hiện băng giá vào các đợt không khí lạnh mạnh."
+                }
+            },
+            {
+                id: "VN-09", stt: 9, name: "Quảng Ninh",
+                mergedFrom: "Giữ nguyên (Tỉnh Quảng Ninh)",
+                regionCode: "V1", regionName: "Đông Bắc & Duyên hải Bắc Bộ",
+                color: "#2CE5C3",
+                x: 9.2, z: -35.2,
+                polygon: [[6.8,-36.2],[12.2,-34.5],[11.5,-36.8],[7.2,-34.2]],
+                hubs: [{ name: "Hạ Long", x: 9.0, z: -35.2 }],
+                landmarkType: "halong",
+                transport: ["Cao tốc xuyên tỉnh Hải Phòng - Hạ Long - Vân Đồn - Móng Cái", "Sân bay Quốc tế Vân Đồn", "Cảng tàu khách Quốc tế Hạ Long & Tuần Châu"],
+                attractions: [
+                    { name: "Di sản Thiên nhiên Thế giới Vịnh Hạ Long & Vịnh Bái Tử Long", cluster: "Cụm Kỳ quan Vịnh biển", desc: "Gần 2.000 hòn đảo đá vôi kỳ vĩ (Hòn Trống Mái, Đỉnh Hương, Đảo Ti Tốp, Hang Sửng Sốt, Động Thiên Cung) cùng dịch vụ du thuyền nghỉ đêm đẳng cấp." },
+                    { name: "Khu di tích & Danh thắng Yên Tử (Di sản Thế giới)", cluster: "Cụm Văn hóa - Tâm linh Trúc Lâm", desc: "Kinh đô Phật giáo Trúc Lâm Việt Nam gắn với Phật hoàng Trần Nhân Tông, Chùa Đồng trên đỉnh núi cao 1.068m." },
+                    { name: "Bình Liêu, Đảo Cô Tô, Quan Lạn & Móng Cái - Trà Cổ", cluster: "Cụm Biên giới & Hải đảo", desc: "Sống lưng khủng long Bình Liêu, Mũi Sa Vĩ địa đầu Đông Bắc và những bãi biển đảo nguyên sơ." }
+                ],
+                cuisine: ["Chả mực Hạ Long", "Sá sùng Quan Lạn", "Gà Tiên Yên", "Sam biển Hạ Long", "Rượu mơ Yên Tử"],
+                routeAdvice: "Hình mẫu 'Một tỉnh - Đa trải nghiệm': Buổi sáng lễ Phật non thiêng Yên Tử, buổi chiều du thuyền trên kỳ quan Vịnh Hạ Long, ngày hôm sau khám phá biên giới Bình Liêu - Móng Cái.",
+                quiz: {
+                    q: "Quần thể di tích và danh thắng Yên Tử (Quảng Ninh) gắn liền với vị Vua - Phật hoàng nào đã sáng lập Thiền phái Trúc Lâm Việt Nam?",
+                    options: ["Phật hoàng Trần Nhân Tông", "Vua Lý Thái Tổ", "Vua Lê Thánh Tông", "Vua Đinh Tiên Hoàng"],
+                    ans: 0,
+                    explain: "Sau hai lần lãnh đạo kháng chiến chống Nguyên - Mông thắng lợi, Vua Trần Nhân Tông đã nhường ngôi, lên núi Yên Tử tu hành và sáng lập Thiền phái Trúc Lâm."
+                }
+            },
+            {
+                id: "VN-10", stt: 10, name: "Phú Thọ",
+                mergedFrom: "Hợp nhất Phú Thọ + Vĩnh Phúc + Hòa Bình",
+                regionCode: "V1", regionName: "Trung du & Miền núi phía Bắc",
+                color: "#F5C71A",
+                x: -1.8, z: -33.2,
+                polygon: [[-4.2,-35.5],[0.5,-35.2],[0.8,-30.8],[-3.8,-30.5]],
+                hubs: [
+                    { name: "Việt Trì", x: -1.5, z: -34.0 },
+                    { name: "Vĩnh Phúc", x: -0.2, z: -34.2 },
+                    { name: "Hòa Bình", x: -2.2, z: -31.8 }
+                ],
+                landmarkType: "temple_gate",
+                transport: ["Cao tốc Nội Bài - Lào Cai", "Cao tốc Hòa Lạc - Hòa Bình", "Sông Đà - Sông Lô - Sông Hồng (Ngã ba Bạch Hạc)"],
+                attractions: [
+                    { name: "Khu di tích lịch sử Quốc gia đặc biệt Đền Hùng & Hát Xoan", cluster: "Cụm Đất Tổ (Phú Thọ)", desc: "Nơi thờ tự các Vua Hùng trên núi Nghĩa Lĩnh, Vườn quốc gia Xuân Sơn và Đồi chè Long Cốc." },
+                    { name: "Khu du lịch Quốc gia Tam Đảo & Danh thắng Tây Thiên", cluster: "Cụm Nghỉ dưỡng Vĩnh Phúc", desc: "Thị trấn trong sương Tam Đảo, Thiền viện Trúc Lâm Tây Thiên và Hồ Đại Lải." },
+                    { name: "Thung lũng Mai Châu, Lòng hồ Hòa Bình & Suối khoáng Kim Bôi", cluster: "Cụm Văn hóa Mường - Thái (Hòa Bình)", desc: "Bản Lác Mai Châu, Thủy điện Hòa Bình, Đền Thác Bờ và văn hóa Chiêng Mường." }
+                ],
+                cuisine: ["Thịt chua Thanh Sơn", "Cá anh vũ Việt Trì", "Ngọn su su Tam Đảo", "Cơm lam Mai Châu", "Cá nướng lòng hồ Hòa Bình"],
+                routeAdvice: "Tuyến vành đai phía Tây Thủ đô Hà Nội cực kỳ đa dạng: Nghỉ dưỡng núi Tam Đảo ➔ Về nguồn Đền Hùng ➔ Trải nghiệm văn hóa Mai Châu - Hòa Bình.",
+                quiz: {
+                    q: "Tỉnh Phú Thọ mới (hợp nhất Phú Thọ, Vĩnh Phúc, Hòa Bình) sở hữu đồng thời ba điểm đến nổi tiếng nào sau đây?",
+                    options: [
+                        "Đền Hùng - Tam Đảo - Thung lũng Mai Châu",
+                        "Chùa Hương - Tràng An - Phố Hiến",
+                        "Sa Pa - Hồ Ba Bể - Mẫu Sơn",
+                        "Yên Tử - Côn Sơn - Đền Trần"
+                    ],
+                    ans: 0,
+                    explain: "Đền Hùng (Phú Thọ), Tam Đảo (Vĩnh Phúc) và Mai Châu (Hòa Bình) nay cùng nằm trong không gian du lịch tỉnh Phú Thọ mới."
+                }
+            },
+
+            // ================= VÙNG 2: ĐỒNG BẰNG SÔNG HỒNG (5) =================
+            {
+                id: "VN-11", stt: 11, name: "Bắc Ninh",
+                mergedFrom: "Hợp nhất Bắc Ninh + Bắc Giang",
+                regionCode: "V2", regionName: "Đồng bằng sông Hồng & Kinh Bắc",
+                color: "#F05A22",
+                x: 4.5, z: -34.2,
+                polygon: [[2.2,-35.8],[6.8,-35.5],[6.5,-33.0],[2.5,-33.2]],
+                hubs: [
+                    { name: "Bắc Giang", x: 4.8, z: -34.8 },
+                    { name: "Bắc Ninh", x: 3.8, z: -33.6 }
+                ],
+                landmarkType: "pagoda",
+                transport: ["Cao tốc Hà Nội - Bắc Giang - Lạng Sơn", "QL1A, QL18 kết nối Nội Bài - Hạ Long"],
+                attractions: [
+                    { name: "Không gian Văn hóa Quan họ & Hệ thống Cổ tự Kinh Bắc", cluster: "Cụm Văn hóa Bắc Ninh", desc: "Đền Đô (thờ 8 vị vua nhà Lý), Chùa Phật Tích, Chùa Bút Tháp, Chùa Dâu và Làng tranh dân gian Đông Hồ." },
+                    { name: "Khu tâm linh - sinh thái Tây Yên Tử & Chùa Vĩnh Nghiêm", cluster: "Cụm Bắc Giang", desc: "Chùa Vĩnh Nghiêm (nơi lưu giữ Mộc bản kinh Phật - Di sản tư liệu UNESCO), Chùa Bổ Đà và con đường Hoằng dương Phật pháp Tây Yên Tử." },
+                    { name: "Khu di tích Khởi nghĩa Yên Thế & Vùng vải thiều Lục Ngạn", cluster: "Cụm Sinh thái Nông nghiệp", desc: "Hồ Khuôn Thần, Hồ Cấm Sơn và du lịch miệt vườn vải thiều Lục Ngạn." }
+                ],
+                cuisine: ["Bánh phu thê Đình Bảng", "Vải thiều Lục Ngạn", "Mì Chũ", "Bánh đa Kế", "Gà đồi Yên Thế"],
+                routeAdvice: "Tái thống nhất trọn vẹn vùng văn hóa Kinh Bắc cổ, kết nối trực tiếp với Quảng Ninh và Hải Phòng tạo thành cung đường Di sản Phật giáo Trúc Lâm.",
+                quiz: {
+                    q: "Ngôi chùa cổ nào tại tỉnh Bắc Ninh mới (địa phận Bắc Giang cũ) đang lưu giữ kho Mộc bản kinh Phật Thiền phái Trúc Lâm được UNESCO công nhận là Di sản tư liệu?",
+                    options: ["Chùa Vĩnh Nghiêm", "Chùa Một Cột", "Chùa Hương", "Chùa Cầu"],
+                    ans: 0,
+                    explain: "Chùa Vĩnh Nghiêm là chốn tổ của Thiền phái Trúc Lâm, nổi tiếng với hơn 3.000 mộc bản khắc ngược chữ Hán - Nôm."
+                }
+            },
+            {
+                id: "VN-12", stt: 12, name: "TP. Hà Nội",
+                mergedFrom: "Giữ nguyên (Thủ đô Hà Nội)",
+                regionCode: "V2", regionName: "Đồng bằng sông Hồng",
+                color: "#0047BA",
+                x: 1.2, z: -32.8,
+                polygon: [[-0.2,-33.8],[2.5,-33.5],[2.4,-31.2],[-0.2,-31.5]],
+                hubs: [{ name: "Hà Nội", x: 1.2, z: -32.6 }],
+                landmarkType: "khue_van_cac",
+                transport: ["Cảng Hàng không Quốc tế Nội Bài", "Tâm điểm 7 tuyến Cao tốc hướng tâm", "Đường sắt Quốc gia & Đường sắt đô thị"],
+                attractions: [
+                    { name: "Hoàng thành Thăng Long, Văn Miếu - Quốc Tử Giám & Hồ Hoàn Kiếm", cluster: "Cụm Di sản Trung tâm", desc: "Di sản Văn hóa Thế giới Hoàng thành Thăng Long, Khuê Văn Các - trường đại học đầu tiên của Việt Nam, Tháp Rùa - Đền Ngọc Sơn và 36 phố phường." },
+                    { name: "Lăng Chủ tịch Hồ Chí Minh & Chùa Một Cột", cluster: "Cụm Quảng trường Ba Đình", desc: "Quần thể di tích lịch sử - chính trị thiêng liêng bậc nhất của cả nước." },
+                    { name: "Chùa Hương, Làng cổ Đường Lâm, Làng gốm Bát Tràng & Ba Vì", cluster: "Cụm Ngoại thành & Làng nghề", desc: "Danh thắng Hương Sơn, Thành cổ Cổ Loa, Vườn quốc gia Ba Vì và hệ thống làng nghề truyền thống ngàn năm." }
+                ],
+                cuisine: ["Phở Hà Nội", "Bún chả", "Chả cá Lã Vọng", "Cốm làng Vòng", "Cà phê trứng", "Bánh tôm Hồ Tây"],
+                routeAdvice: "Trung tâm phân phối khách quốc tế và nội địa lớn nhất miền Bắc (Hub & Spoke) tỏa đi 33 tỉnh thành còn lại.",
+                quiz: {
+                    q: "Công trình kiến trúc nào nằm trong Văn Miếu - Quốc Tử Giám được chọn làm biểu tượng chính thức của Thủ đô Hà Nội?",
+                    options: ["Khuê Văn Các", "Tháp Rùa", "Cột cờ Hà Nội", "Ô Quan Chưởng"],
+                    ans: 0,
+                    explain: "Khuê Văn Các (xây dựng năm 1805) tại Văn Miếu - Quốc Tử Giám là biểu tượng văn hiến của Thủ đô Hà Nội."
+                }
+            },
+            {
+                id: "VN-13", stt: 13, name: "TP. Hải Phòng",
+                mergedFrom: "Hợp nhất TP. Hải Phòng + Hải Dương",
+                regionCode: "V2", regionName: "Đồng bằng sông Hồng & Duyên hải",
+                color: "#34D399",
+                x: 6.2, z: -32.6,
+                polygon: [[4.0,-33.2],[8.2,-33.0],[8.0,-31.2],[4.2,-31.4]],
+                hubs: [
+                    { name: "Hải Phòng", x: 7.0, z: -32.4 },
+                    { name: "Hải Dương", x: 4.8, z: -32.4 }
+                ],
+                landmarkType: "port_island",
+                transport: ["Sân bay Quốc tế Cát Bi", "Cao tốc Hà Nội - Hải Phòng", "Cảng biển Quốc tế Lạch Huyện, Cáp treo Cát Bà"],
+                attractions: [
+                    { name: "Quần đảo Cát Bà & Vịnh Lan Hạ (Di sản Thiên nhiên Thế giới)", cluster: "Cụm Biển đảo Hải Phòng", desc: "Khu dự trữ sinh quyển thế giới và Di sản thiên nhiên thế giới liên tỉnh (Vịnh Hạ Long - Quần đảo Cát Bà), Khu du lịch Đồ Sơn." },
+                    { name: "Khu di tích Quốc gia đặc biệt Côn Sơn - Kiếp Bạc", cluster: "Cụm Văn hóa Xứ Đông (Hải Dương)", desc: "Gắn liền với Anh hùng dân tộc Hưng Đạo Đại Vương Trần Quốc Tuấn và Danh nhân văn hóa thế giới Nguyễn Trãi." },
+                    { name: "Foodtour Nội đô Hải Phòng & Đảo Cò Chi Lăng Nam", cluster: "Cụm Đô thị & Sinh thái", desc: "Nhà hát lớn Hải Phòng, Bạch Đằng Giang, Văn Miếu Mao Điền và trải nghiệm ẩm thực đường phố." }
+                ],
+                cuisine: ["Bánh đa cua Hải Phòng", "Nem cua bể", "Bánh đậu xanh Hải Dương", "Vải thiều Thanh Hà", "Chả rươi Tứ Kỳ"],
+                routeAdvice: "Kết nối Côn Sơn - Kiếp Bạc với Yên Tử (Quảng Ninh) và Vĩnh Nghiêm (Bắc Ninh), đồng thời kết nối Vịnh Lan Hạ (Cát Bà) với Vịnh Hạ Long.",
+                quiz: {
+                    q: "Quần đảo Cát Bà (TP. Hải Phòng) cùng với danh thắng nào của tỉnh Quảng Ninh được UNESCO công nhận là Di sản Thiên nhiên Thế giới liên tỉnh?",
+                    options: ["Vịnh Hạ Long", "Đảo Cô Tô", "Đảo Tuần Châu", "Bãi Dài Vân Đồn"],
+                    ans: 0,
+                    explain: "Quần thể Vịnh Hạ Long - Quần đảo Cát Bà là Di sản Thiên nhiên Thế giới liên tỉnh đầu tiên của Việt Nam."
+                }
+            },
+            {
+                id: "VN-14", stt: 14, name: "Hưng Yên",
+                mergedFrom: "Hợp nhất Hưng Yên + Thái Bình",
+                regionCode: "V2", regionName: "Đồng bằng sông Hồng",
+                color: "#F59E0B",
+                x: 4.5, z: -30.5,
+                polygon: [[2.6,-32.2],[6.8,-31.4],[6.5,-29.2],[3.0,-29.8]],
+                hubs: [
+                    { name: "Hưng Yên", x: 3.4, z: -31.5 },
+                    { name: "Thái Bình", x: 5.5, z: -30.0 }
+                ],
+                landmarkType: "pagoda",
+                transport: ["Cao tốc Hà Nội - Hải Phòng, Tuyến đường bộ ven biển Hải Phòng - Thái Bình - Ninh Bình"],
+                attractions: [
+                    { name: "Khu di tích Quốc gia đặc biệt Phố Hiến & Đền Chử Đồng Tử", cluster: "Cụm Văn hóa Hưng Yên", desc: "'Thứ nhất Kinh Kỳ, thứ nhì Phố Hiến' với Văn Miếu Xích Đằng, Chùa Chuông, Đền Mẫu, Làng cổ Nôm và khu đô thị Ecopark." },
+                    { name: "Chùa Keo (Di tích Quốc gia đặc biệt) & Đền Trần Thái Bình", cluster: "Cụm Kiến trúc Cổ Thái Bình", desc: "Kiệt tác kiến trúc gỗ cổ truyền Việt Nam thế kỷ XVII với Gác chuông Chùa Keo cao 3 tầng mái." },
+                    { name: "Biển Cồn Vành, Cồn Đen & Rừng ngập mặn Thái Thụy", cluster: "Cụm Sinh thái Biển", desc: "Biển vô cực Quang Lang, rừng ngập mặn ven biển thuộc Khu dự trữ sinh quyển châu thổ sông Hồng." }
+                ],
+                cuisine: ["Nhãn lồng Hưng Yên", "Gà Đông Tảo", "Bánh cáy làng Nguyễn", "Canh cá Quỳnh Côi", "Bún thang lươn Phố Hiến"],
+                routeAdvice: "Sau sáp nhập, Hưng Yên không còn là tỉnh nội đồng mà vươn thẳng ra biển Đông qua cửa biển Thái Bình (Cồn Vành - Cồn Đen).",
+                quiz: {
+                    q: "Công trình kiến trúc cổ nào tại tỉnh Hưng Yên mới (địa phận Thái Bình cũ) nổi tiếng với gác chuông bằng gỗ ghép mộng không dùng đinh?",
+                    options: ["Chùa Keo (Vũ Thư)", "Chùa Một Cột", "Chùa Thiên Mụ", "Chùa Cầu"],
+                    ans: 0,
+                    explain: "Chùa Keo (Thái Bình) là một trong những cổ tự bằng gỗ tiêu biểu nhất của nghệ thuật kiến trúc cổ Việt Nam."
+                }
+            },
+            {
+                id: "VN-15", stt: 15, name: "Ninh Bình",
+                mergedFrom: "Hợp nhất Ninh Bình + Hà Nam + Nam Định",
+                regionCode: "V2", regionName: "Đồng bằng sông Hồng",
+                color: "#F05A22",
+                x: 2.2, z: -29.0,
+                polygon: [[-0.2,-31.2],[3.2,-30.5],[4.8,-28.0],[0.5,-27.8]],
+                hubs: [
+                    { name: "Phủ Lý", x: 1.5, z: -30.5 },
+                    { name: "Nam Định", x: 3.5, z: -29.2 },
+                    { name: "Hoa Lư (Ninh Bình)", x: 1.2, z: -28.5 }
+                ],
+                landmarkType: "trang_an",
+                transport: ["Cao tốc Pháp Vân - Cầu Giẽ - Cao Bồ - Mai Sơn", "Đường sắt Bắc - Nam, Tuyến ven biển"],
+                attractions: [
+                    { name: "Quần thể Danh thắng Tràng An (Di sản Kép Thế giới UNESCO)", cluster: "Cụm Cố đô Hoa Lư (Ninh Bình)", desc: "Di sản Văn hóa và Thiên nhiên Thế giới duy nhất ở Đông Nam Á: Tràng An, Tam Cốc - Bích Động, Cố đô Hoa Lư, Chùa Bái Đính, Hang Múa, VQG Cúc Phương." },
+                    { name: "Khu du lịch Quốc gia Tam Chúc & Chùa Địa Tạng Phi Lai", cluster: "Cụm Tâm linh Hà Nam", desc: "Quần thể du lịch tâm linh quy mô lớn gắn với trục cảnh quan đá vôi ngập nước." },
+                    { name: "Khu di tích Đền Trần - Chùa Phổ Minh, Phủ Dầy & VQG Xuân Thủy", cluster: "Cụm Văn hóa Trần & Biển Nam Định", desc: "Đất phát tích vương triều Trần, Trung tâm Tín ngưỡng thờ Mẫu Tam phủ (UNESCO) và Khu Ramsar đầu tiên của Đông Nam Á (Xuân Thủy)." }
+                ],
+                cuisine: ["Thịt dê & Cơm cháy Ninh Bình", "Phở bò Nam Định", "Cá kho làng Vũ Đại", "Chuối ngự Đại Hoàng", "Bánh xíu páo"],
+                routeAdvice: "Siêu trung tâm du lịch Văn hóa - Tâm linh - Sinh thái Nam Đồng bằng sông Hồng: Tam Chúc ➔ Bái Đính - Tràng An ➔ Đền Trần - Phủ Dầy.",
+                quiz: {
+                    q: "Quần thể danh thắng Tràng An (Ninh Bình) được UNESCO ghi danh là loại hình di sản nào?",
+                    options: [
+                        "Di sản Thế giới Hỗn hợp (Văn hóa và Thiên nhiên)",
+                        "Chỉ là Di sản Văn hóa Phi vật thể",
+                        "Chỉ là Di sản Tư liệu Thế giới",
+                        "Công viên Địa chất Toàn cầu"
+                    ],
+                    ans: 0,
+                    explain: "Tràng An là Di sản Thế giới kép (Hỗn hợp cả Văn hóa và Thiên nhiên) đầu tiên của Việt Nam và Đông Nam Á."
+                }
+            },
+
+            // ================= VÙNG 3: BẮC TRUNG BỘ & DUYÊN HẢI MIỀN TRUNG (8) =================
+            {
+                id: "VN-16", stt: 16, name: "Thanh Hóa",
+                mergedFrom: "Giữ nguyên (Tỉnh Thanh Hóa)",
+                regionCode: "V3", regionName: "Bắc Trung Bộ & Duyên hải Miền Trung",
+                color: "#2CE5C3",
+                x: -0.5, z: -25.2,
+                polygon: [[-4.8,-29.0],[1.8,-27.5],[2.2,-23.0],[-3.2,-23.5]],
+                hubs: [{ name: "Thanh Hóa", x: 0.5, z: -25.2 }],
+                landmarkType: "citadel",
+                transport: ["Sân bay Thọ Xuân", "Cao tốc Mai Sơn - Quốc lộ 45 - Nghi Sơn", "Đường sắt Bắc - Nam, Cảng Nghi Sơn"],
+                attractions: [
+                    { name: "Di sản Văn hóa Thế giới Thành Nhà Hồ & Khu di tích Lam Kinh", cluster: "Cụm Di sản Lịch sử", desc: "Tòa thành đá độc nhất vô nhị xây dựng năm 1397 và Kinh đô Lam Kinh của vương triều Hậu Lê." },
+                    { name: "Đô thị Du lịch Biển Sầm Sơn, Hải Tiến, Hải Hòa", cluster: "Cụm Nghỉ dưỡng Biển", desc: "Trung tâm du lịch biển sôi động hàng đầu miền Bắc và Bắc Trung Bộ." },
+                    { name: "Khu bảo tồn thiên nhiên Pù Luông, Suối cá thần Cẩm Thủy & Bến En", cluster: "Cụm Sinh thái Miền Tây", desc: "Ruộng bậc thang và guồng nước Pù Luông, Vườn quốc gia Bến En." }
+                ],
+                cuisine: ["Nem chua Thanh Hóa", "Chả tôm", "Bánh gai Tứ Trụ", "Vịt Cổ Lũng (Pù Luông)", "Hải sản Sầm Sơn"],
+                routeAdvice: "Cửa ngõ chuyển tiếp giữa Bắc Bộ và Trung Bộ, có đầy đủ hệ sinh thái Núi (Pù Luông) - Trung du (Thành Nhà Hồ, Lam Kinh) - Biển (Sầm Sơn).",
+                quiz: {
+                    q: "Di sản Văn hóa Thế giới nào tại Thanh Hóa nổi tiếng với kỹ thuật ghép những khối đá vôi nặng hàng chục tấn không dùng chất kết dính?",
+                    options: ["Thành Nhà Hồ", "Hoàng thành Thăng Long", "Kinh thành Huế", "Thành cổ Quảng Trị"],
+                    ans: 0,
+                    explain: "Thành Nhà Hồ (Vĩnh Lộc, Thanh Hóa) do Hồ Quý Ly xây dựng năm 1397 là công trình kiến trúc đá kỳ vĩ được UNESCO vinh danh."
+                }
+            },
+            {
+                id: "VN-17", stt: 17, name: "Nghệ An",
+                mergedFrom: "Giữ nguyên (Tỉnh Nghệ An)",
+                regionCode: "V3", regionName: "Bắc Trung Bộ & Duyên hải Miền Trung",
+                color: "#F5C71A",
+                x: -2.2, z: -20.2,
+                polygon: [[-7.2,-23.5],[1.5,-22.5],[2.0,-17.8],[-5.0,-18.5]],
+                hubs: [{ name: "Vinh", x: 1.0, z: -19.2 }],
+                landmarkType: "lotus_house",
+                transport: ["Sân bay Quốc tế Vinh", "Cao tốc Diễn Châu - Bãi Vọt", "Đường sắt Bắc - Nam, Đường Hồ Chí Minh"],
+                attractions: [
+                    { name: "Khu di tích Quốc gia đặc biệt Kim Liên (Nam Đàn)", cluster: "Cụm Về nguồn", desc: "Làng Sen quê nội, Làng Hoàng Trù quê ngoại của Chủ tịch Hồ Chí Minh và Khu mộ bà Hoàng Thị Loan." },
+                    { name: "Đô thị Biển Cửa Lò & Đảo Lan Châu - Đảo Ngư", cluster: "Cụm Du lịch Biển", desc: "Bãi biển Cửa Lò thoai thoải, cáp treo ra đảo Hòn Ngư và du lịch nghỉ dưỡng ven biển." },
+                    { name: "Vườn quốc gia Pù Mát, Đồi chè Thanh Chương & Mường Lống", cluster: "Cụm Sinh thái Miền Tây Nghệ An", desc: "Khu dự trữ sinh quyển thế giới miền Tây Nghệ An với Thác Khe Kèm, đập Phà Lài và ốc đảo chè Thanh Chương." }
+                ],
+                cuisine: ["Cháo lươn & Súp lươn Nghệ An", "Mực nháy Cửa Lò", "Nhút Thanh Chương", "Tương Nam Đàn", "Cam Xã Đoài"],
+                routeAdvice: "Điểm nhấn cốt lõi trên 'Con đường Di sản Miền Trung' và hành trình về nguồn xuyên Việt.",
+                quiz: {
+                    q: "Khu di tích Quốc gia đặc biệt Kim Liên (huyện Nam Đàn, Nghệ An) bao gồm hai cụm di tích chính nào gắn với thời niên thiếu của Bác Hồ?",
+                    options: [
+                        "Làng Sen (quê nội) và Làng Hoàng Trù (quê ngoại)",
+                        "Pác Bó và Tân Trào",
+                        "Bến Nhà Rồng và Dinh Độc Lập",
+                        "Đền Chung Sơn và Truông Bồn"
+                    ],
+                    ans: 0,
+                    explain: "Khu di tích Kim Liên gồm cụm di tích Làng Sen (quê nội) và cụm di tích Hoàng Trù (quê ngoại) cùng mộ bà Hoàng Thị Loan trên núi Động Tranh."
+                }
+            },
+            {
+                id: "VN-18", stt: 18, name: "Hà Tĩnh",
+                mergedFrom: "Giữ nguyên (Tỉnh Hà Tĩnh)",
+                regionCode: "V3", regionName: "Bắc Trung Bộ & Duyên hải Miền Trung",
+                color: "#F05A22",
+                x: 1.5, z: -16.2,
+                polygon: [[-1.5,-18.0],[3.0,-17.5],[4.2,-14.5],[0.2,-15.0]],
+                hubs: [{ name: "Hà Tĩnh", x: 2.2, z: -16.2 }],
+                landmarkType: "monument",
+                transport: ["Cao tốc Bắc - Nam (Bãi Vọt - Hàm Nghi - Vũng Áng)", "QL1A, QL8A (Cửa khẩu Quốc tế Cầu Treo), Cảng Vũng Áng"],
+                attractions: [
+                    { name: "Khu di tích Quốc gia đặc biệt Ngã ba Đồng Lộc", cluster: "Cụm Lịch sử Cách mạng", desc: "Địa chỉ đỏ tri ân 10 nữ Anh hùng Liệt sĩ Thanh niên xung phong trên tuyến đường Trường Sơn." },
+                    { name: "Khu lưu niệm Đại thi hào Nguyễn Du & Chùa Hương Tích", cluster: "Cụm Văn hóa - Tâm linh", desc: "Quê hương tác giả Truyện Kiều (Tiên Điền), Chùa Hương Tích ('Hoan Châu đệ nhất danh lam') trên dãy Hồng Lĩnh và Đền Ông Hoàng Mười." },
+                    { name: "Biển Thiên Cầm, Hồ Kẻ Gỗ & Vườn Quốc gia Vũ Quang", cluster: "Cụm Biển & Sinh thái", desc: "Bãi biển hình cánh cung đàn trời Thiên Cầm và Vườn di sản ASEAN Vũ Quang." }
+                ],
+                cuisine: ["Kẹo cu đơ Hà Tĩnh", "Mực nhảy Vũng Áng", "Gỏi cá đục", "Bưởi Phúc Trạch", "Hến xúc bánh đa Đức Thọ"],
+                routeAdvice: "Thường kết hợp chặt chẽ với Nghệ An trong tour 'Về nguồn & Văn hóa Hồng Lam' (Kim Liên - Đền Ông Hoàng Mười - Nguyễn Du - Ngã ba Đồng Lộc).",
+                quiz: {
+                    q: "Chùa Hương Tích nằm trên dãy núi Hồng Lĩnh (Hà Tĩnh) từ xưa được mệnh danh là gì?",
+                    options: [
+                        "Hoan Châu đệ nhất danh lam",
+                        "Nam thiên đệ nhất động",
+                        "Đệ nhất hùng quan",
+                        "Kinh đô Phật giáo"
+                    ],
+                    ans: 0,
+                    explain: "Chùa Hương Tích tại huyện Can Lộc, Hà Tĩnh nổi tiếng với danh hiệu 'Hoan Châu đệ nhất danh lam'."
+                }
+            },
+            {
+                id: "VN-19", stt: 19, name: "Quảng Trị",
+                mergedFrom: "Hợp nhất Quảng Bình + Quảng Trị",
+                regionCode: "V3", regionName: "Bắc Trung Bộ & Duyên hải Miền Trung",
+                color: "#F5C71A",
+                x: 4.5, z: -11.5,
+                polygon: [[1.2,-14.5],[4.5,-14.0],[7.5,-8.5],[4.2,-9.2]],
+                hubs: [
+                    { name: "Đồng Hới", x: 3.8, z: -12.8 },
+                    { name: "Đông Hà", x: 6.0, z: -10.0 }
+                ],
+                landmarkType: "cave_arch",
+                transport: ["Sân bay Đồng Hới & Sân bay Quảng Trị", "Cao tốc Bắc - Nam, Đường Hồ Chí Minh (nhánh Đông & Tây)", "Cửa khẩu Quốc tế Lao Bảo, Cha Lo"],
+                attractions: [
+                    { name: "Di sản Thiên nhiên Thế giới Vườn Quốc gia Phong Nha - Kẻ Bàng", cluster: "Cụm Vương quốc Hang động (Quảng Bình)", desc: "Hang Sơn Đoòng (hang động tự nhiên lớn nhất thế giới), Động Phong Nha, Động Thiên Đường, Hang Én, Suối Nước Moọc, Biển Nhật Lệ và Vũng Chùa - Đảo Yến." },
+                    { name: "Thành cổ Quảng Trị, Đôi bờ Hiền Lương - Bến Hải & Địa đạo Vịnh Mốc", cluster: "Cụm Ký ức Chiến tranh & Khát vọng Hòa bình (Quảng Trị)", desc: "Thành cổ 81 ngày đêm mùa hè đỏ lửa, Cầu Hiền Lương vĩ tuyến 17, Nghĩa trang Liệt sĩ Trường Sơn, Đường 9 - Khe Sanh và Đảo Cồn Cỏ." }
+                ],
+                cuisine: ["Cháo canh Quảng Bình", "Khoai deo", "Bún hến Mai Xá", "Thịt trâu lá trơng", "Cà phê Khe Sanh"],
+                routeAdvice: "Sự kết hợp hoàn hảo giữa 'Kỳ quan Thiên nhiên Thế giới Phong Nha - Kẻ Bàng' và 'Di sản Ký ức Hòa bình Quảng Trị' cùng tuyến Hành lang Kinh tế Đông - Tây.",
+                quiz: {
+                    q: "Tỉnh Quảng Trị mới (hợp nhất Quảng Bình và Quảng Trị) sở hữu hang động tự nhiên lớn nhất thế giới nào thuộc Vườn quốc gia Phong Nha - Kẻ Bàng?",
+                    options: ["Hang Sơn Đoòng", "Động Hương Tích", "Động Tam Thanh", "Hang Đầu Gỗ"],
+                    ans: 0,
+                    explain: "Hang Sơn Đoòng thuộc quần thể Di sản Thiên nhiên Thế giới Vườn quốc gia Phong Nha - Kẻ Bàng là hang động tự nhiên lớn nhất thế giới."
+                }
+            },
+            {
+                id: "VN-20", stt: 20, name: "TP. Huế",
+                mergedFrom: "Giữ nguyên (Thành phố trực thuộc TW Huế)",
+                regionCode: "V3", regionName: "Bắc Trung Bộ & Duyên hải Miền Trung",
+                color: "#2CE5C3",
+                x: 7.8, z: -7.2,
+                polygon: [[5.5,-8.8],[9.2,-8.0],[10.2,-6.0],[6.8,-6.5]],
+                hubs: [{ name: "Huế", x: 8.0, z: -7.2 }],
+                landmarkType: "imperial_gate",
+                transport: ["Cảng Hàng không Quốc tế Phú Bài", "Cao tốc Cam Lộ - La Sơn - Túy Loan, Hầm Hải Vân", "Cảng tàu biển Chân Mây"],
+                attractions: [
+                    { name: "Quần thể Di tích Cố đô Huế (Di sản Văn hóa Thế giới UNESCO)", cluster: "Cụm Kinh thành & Lăng tẩm", desc: "Đại Nội Huế (Ngọ Môn, Điện Thái Hòa, Tử Cấm Thành), Chùa Thiên Mụ và hệ thống Lăng Minh Mạng, Lăng Tự Đức, Lăng Khải Định, Lăng Gia Long." },
+                    { name: "Nhã nhạc Cung đình Huế, Sông Hương & Cầu Trường Tiền", cluster: "Cụm Di sản Phi vật thể & Đô thị", desc: "Thưởng thức Ca Huế trên sông Hương và trải nghiệm nghệ thuật ẩm thực Cung đình." },
+                    { name: "Vịnh Lăng Cô, Vườn Quốc gia Bạch Mã & Đầm phá Tam Giang", cluster: "Cụm Sinh thái Biển - Đầm phá", desc: "Vịnh Lăng Cô (một trong những vịnh biển đẹp nhất thế giới) và hệ đầm phá nước lợ Tam Giang - Cầu Hai lớn nhất Đông Nam Á." }
+                ],
+                cuisine: ["Bún bò Huế", "Cơm hến", "Bánh bèo - Nậm - Lọc", "Chè Cung đình Huế", "Mè xửng", "Tôm chua Huế"],
+                routeAdvice: "Thành phố Di sản trực thuộc Trung ương đầu tiên của Việt Nam, tâm điểm của tuyến Huế - Đà Nẵng - Hội An.",
+                quiz: {
+                    q: "Loại hình nghệ thuật trình diễn nào của Cố đô Huế là Di sản Văn hóa Phi vật thể đầu tiên của Việt Nam được UNESCO ghi danh (năm 2003)?",
+                    options: [
+                        "Nhã nhạc Cung đình Huế",
+                        "Dân ca Quan họ",
+                        "Đờn ca tài tử",
+                        "Không gian văn hóa Cồng chiêng"
+                    ],
+                    ans: 0,
+                    explain: "Nhã nhạc Cung đình Huế được UNESCO công nhận là Kiệt tác truyền khẩu và phi vật thể nhân loại năm 2003."
+                }
+            },
+            {
+                id: "VN-21", stt: 21, name: "TP. Đà Nẵng",
+                mergedFrom: "Hợp nhất TP. Đà Nẵng + Quảng Nam (gồm Quần đảo Hoàng Sa)",
+                regionCode: "V3", regionName: "Duyên hải Miền Trung",
+                color: "#F05A22",
+                x: 9.8, z: -3.5,
+                polygon: [[6.8,-6.0],[11.5,-5.2],[12.5,-1.0],[7.2,-1.5]],
+                hubs: [
+                    { name: "Đà Nẵng", x: 10.5, z: -4.8 },
+                    { name: "Tam Kỳ", x: 11.2, z: -2.0 }
+                ],
+                landmarkType: "golden_bridge",
+                transport: ["Cảng Hàng không Quốc tế Đà Nẵng & Sân bay Chu Lai", "Cảng biển Tiên Sa", "Cao tốc Đà Nẵng - Quảng Ngãi"],
+                attractions: [
+                    { name: "Sun World Ba Na Hills (Cầu Vàng), Bán đảo Sơn Trà & Ngũ Hành Sơn", cluster: "Cụm Đô thị Biển Đà Nẵng", desc: "Cầu Vàng biểu tượng du lịch thế giới, Cầu Rồng phun lửa, Chùa Linh Ứng Sơn Trà, Danh thắng Ngũ Hành Sơn và Biển Mỹ Khê." },
+                    { name: "Đô thị cổ Hội An & Khu đền tháp Mỹ Sơn (02 Di sản Thế giới UNESCO)", cluster: "Cụm Di sản Quảng Nam", desc: "Phố cổ Hội An (Chùa Cầu, đèn lồng sông Hoài), Thánh địa Mỹ Sơn của vương quốc Chămpa cổ và Khu dự trữ sinh quyển Cù Lao Chàm." },
+                    { name: "Rừng dừa Bảy Mẫu, Cổng trời Đông Giang & Quần đảo Hoàng Sa", cluster: "Cụm Sinh thái & Chủ quyền Biển đảo", desc: "Nhà trưng bày Hoàng Sa khẳng định chủ quyền thiêng liêng đối với Quần đảo Hoàng Sa." }
+                ],
+                cuisine: ["Mì Quảng", "Cao lầu Hội An", "Bánh tráng cuốn thịt heo", "Cơm gà Hội An", "Gỏi cá Nam Ô"],
+                routeAdvice: "Việc hợp nhất Đà Nẵng và Quảng Nam tạo nên một 'Siêu đô thị Du lịch - Di sản quốc tế' thống nhất từ Bà Nà - Sơn Trà đến Hội An - Mỹ Sơn - Chu Lai.",
+                quiz: {
+                    q: "Sau khi hợp nhất TP. Đà Nẵng và tỉnh Quảng Nam, thành phố sở hữu hai Di sản Văn hóa Thế giới UNESCO nào?",
+                    options: [
+                        "Đô thị cổ Hội An và Khu đền tháp Mỹ Sơn",
+                        "Cố đô Huế và Phong Nha - Kẻ Bàng",
+                        "Thành Nhà Hồ và Tràng An",
+                        "Hoàng thành Thăng Long và Vịnh Hạ Long"
+                    ],
+                    ans: 0,
+                    explain: "Đô thị cổ Hội An và Khu đền tháp Mỹ Sơn (đều được UNESCO công nhận năm 1999) nay cùng thuộc TP. Đà Nẵng mới."
+                }
+            },
+            {
+                id: "VN-22", stt: 22, name: "Quảng Ngãi",
+                mergedFrom: "Hợp nhất Quảng Ngãi + Kon Tum (gồm Đảo Lý Sơn)",
+                regionCode: "V3", regionName: "Nam Trung Bộ & Bắc Tây Nguyên",
+                color: "#2CE5C3",
+                x: 9.2, z: 2.0,
+                polygon: [[5.2,-1.0],[13.0,-0.5],[13.5,4.2],[5.5,4.0]],
+                hubs: [
+                    { name: "Quảng Ngãi", x: 11.8, z: 1.2 },
+                    { name: "Kon Tum", x: 7.2, z: 3.0 }
+                ],
+                landmarkType: "nha_rong",
+                transport: ["Cao tốc Đà Nẵng - Quảng Ngãi", "Quốc lộ 24 kết nối Măng Đen - Quảng Ngãi - Cảng Sa Kỳ - Đảo Lý Sơn", "Ngã ba Đông Dương (Cửa khẩu Quốc tế Bờ Y)"],
+                attractions: [
+                    { name: "Đảo Lý Sơn (Vương quốc Tỏi & Công viên Địa chất Núi lửa Biển)", cluster: "Cụm Biển đảo Quảng Ngãi", desc: "Cổng Tò Vò, Chùa Hang, Đỉnh Thới Lới, Đảo Bé, Khu lưu niệm Đội Hoàng Sa kiêm quản Bắc Hải và Biển Mỹ Khê." },
+                    { name: "Khu du lịch Sinh thái Quốc gia Măng Đen & Nhà thờ Gỗ Kon Tum", cluster: "Cụm Đại ngàn Kon Tum", desc: "'Đà Lạt thứ hai' giữa rừng thông Măng Đen (Thác Pa Sỹ, Hồ Đăk Ke, Đức Mẹ Măng Đen), Nhà rông Kon Klor và Nhà thờ Gỗ trăm tuổi." },
+                    { name: "Cột mốc Ngã ba Đông Dương (Bờ Y) & Núi Ngọc Linh", cluster: "Cụm Biên giới & Dược liệu", desc: "Cột mốc biên giới 3 nước Việt Nam - Lào - Campuchia và thủ phủ Sâm Ngọc Linh." }
+                ],
+                cuisine: ["Tỏi cô đơn & Gỏi tỏi Lý Sơn", "Cá bống sông Trà", "Don Quảng Ngãi", "Gà nướng cơm lam Măng Đen", "Gỏi lá Kon Tum"],
+                routeAdvice: "Hành trình 'Từ Đảo tiền tiêu Lý Sơn lên Rừng thông Măng Đen' chỉ trên một trục Quốc lộ 24 nội tỉnh dài hơn 100km.",
+                quiz: {
+                    q: "Tuyến du lịch nội tỉnh của Quảng Ngãi mới kết nối trực tiếp hòn đảo tiền tiêu nào với khu du lịch sinh thái rừng thông Măng Đen?",
+                    options: ["Đảo Lý Sơn", "Đảo Phú Quý", "Đảo Côn Sơn", "Đảo Phú Quốc"],
+                    ans: 0,
+                    explain: "Đảo Lý Sơn (Quảng Ngãi) và Khu du lịch Măng Đen (Kon Tum cũ) tạo thành trục du lịch Biển đảo - Cao nguyên đặc sắc thông qua Quốc lộ 24."
+                }
+            },
+            {
+                id: "VN-25", stt: 25, name: "Khánh Hòa",
+                mergedFrom: "Hợp nhất Khánh Hòa + Ninh Thuận (gồm Quần đảo Trường Sa)",
+                regionCode: "V3", regionName: "Duyên hải Nam Trung Bộ",
+                color: "#F05A22",
+                x: 12.2, z: 16.5,
+                polygon: [[10.2,13.5],[14.2,13.8],[13.8,19.8],[9.8,19.2]],
+                hubs: [
+                    { name: "Nha Trang", x: 12.8, z: 15.2 },
+                    { name: "Phan Rang", x: 11.8, z: 18.5 }
+                ],
+                landmarkType: "cham_tower",
+                transport: ["Cảng Hàng không Quốc tế Cam Ranh", "Cao tốc Bắc - Nam (Nha Trang - Cam Lâm - Vĩnh Hảo)", "Cảng biển Quốc tế Nha Trang & Cam Ranh"],
+                attractions: [
+                    { name: "Vịnh Nha Trang, VinWonders, Tháp Bà Ponagar & Vịnh Vân Phong", cluster: "Cụm Đô thị Biển Nha Trang (Khánh Hòa)", desc: "Một trong 29 vịnh đẹp nhất thế giới với Hòn Mun, Hòn Tằm, Viện Hải dương học, Tháp Bà Ponagar và Quần đảo Trường Sa." },
+                    { name: "Vịnh Vĩnh Hy, Vườn Quốc gia Núi Chúa (Hang Rái) & Tháp Po Klong Garai", cluster: "Cụm Nắng gió & Di sản Chăm (Ninh Thuận)", desc: "Khu dự trữ sinh quyển thế giới Núi Chúa, Vịnh Vĩnh Hy, Đồi cát Nam Cương, Vườn nho Thái An và nghệ thuật Gốm Bàu Trúc (UNESCO)." }
+                ],
+                cuisine: ["Yến sào Khánh Hòa", "Bún chả cá & Nem nướng Nha Trang", "Tôm hùm Bình Ba", "Nho & Rượu nho Phan Rang", "Thịt cừu nướng Ninh Thuận"],
+                routeAdvice: "Sở hữu cung đường ven biển đẹp nhất Việt Nam (Bình Tiên - Vĩnh Hy - Cam Ranh - Nha Trang) và trung tâm hàng không quốc tế Cam Ranh.",
+                quiz: {
+                    q: "Tỉnh Khánh Hòa mới (hợp nhất Khánh Hòa và Ninh Thuận) bao gồm quần đảo tiền tiêu nào của Tổ quốc?",
+                    options: ["Quần đảo Trường Sa", "Quần đảo Hoàng Sa", "Quần đảo Cát Bà", "Quần đảo Nam Du"],
+                    ans: 0,
+                    explain: "Quần đảo Trường Sa trực thuộc tỉnh Khánh Hòa; cùng với sự hợp nhất Ninh Thuận, Khánh Hòa mới sở hữu bờ biển dài và giàu tài nguyên bậc nhất cả nước."
+                }
+            },
+
+            // ================= VÙNG 4: TÂY NGUYÊN - NAM TRUNG BỘ MỞ RỘNG (3) =================
+            {
+                id: "VN-23", stt: 23, name: "Gia Lai",
+                mergedFrom: "Hợp nhất Gia Lai + Bình Định",
+                regionCode: "V4", regionName: "Tây Nguyên - Duyên hải Nam Trung Bộ",
+                color: "#0047BA",
+                x: 9.2, z: 6.8,
+                polygon: [[4.8,4.0],[13.8,4.2],[14.2,9.2],[5.0,9.0]],
+                hubs: [
+                    { name: "Pleiku", x: 6.8, z: 6.5 },
+                    { name: "Quy Nhơn", x: 12.8, z: 7.2 }
+                ],
+                landmarkType: "cham_tower",
+                transport: ["Sân bay Phù Cát (Quy Nhơn) & Sân bay Pleiku", "Quốc lộ 19 & Cao tốc Quy Nhơn - Pleiku, Cửa khẩu Quốc tế Lệ Thanh"],
+                attractions: [
+                    { name: "Kỳ Co - Eo Gió, Ghềnh Ráng Tiên Sa & Hệ thống Tháp Chăm Bình Định", cluster: "Cụm Đất Võ & Biển Quy Nhơn (Bình Định)", desc: "Thiên đường biển đảo Kỳ Co - Eo Gió, Hòn Khô, Bảo tàng Quang Trung (Tây Sơn) và Tháp Đôi, Tháp Bánh Ít." },
+                    { name: "Biển Hồ (Hồ T'Nưng), Núi lửa Chư Đăng Ya & Chùa Minh Thành", cluster: "Cụm Cao nguyên Pleiku (Gia Lai)", desc: "'Đôi mắt Pleiku' Biển Hồ, mùa hoa dã quỳ trên miệng núi lửa Chư Đăng Ya, Thủy điện Yaly và Vườn quốc gia Kon Ka Kinh." }
+                ],
+                cuisine: ["Phở khô Gia Lai (Phở 2 tô)", "Bánh hỏi lòng heo Quy Nhơn", "Rượu Bầu Đá", "Chả ram tôm đất", "Gà nướng cơm lam Pleiku"],
+                routeAdvice: "Trục Đông - Tây dọc Quốc lộ 19 cho phép du khách tắm biển Kỳ Co (Quy Nhơn) buổi sáng và thưởng thức cà phê bên Biển Hồ (Pleiku) buổi chiều.",
+                quiz: {
+                    q: "Danh thắng nào tại Pleiku (tỉnh Gia Lai) vốn là miệng núi lửa cổ đã ngừng hoạt động, đi vào âm nhạc với hình ảnh 'Đôi mắt Pleiku'?",
+                    options: ["Biển Hồ (Hồ T'Nưng)", "Hồ Lắk", "Hồ Tà Đùng", "Hồ Xuân Hương"],
+                    ans: 0,
+                    explain: "Biển Hồ (Hồ T'Nưng) tại Pleiku là hồ nước ngọt tự nhiên hình thành từ miệng núi lửa cổ, nổi tiếng với vẻ đẹp thơ mộng."
+                }
+            },
+            {
+                id: "VN-24", stt: 24, name: "Đắk Lắk",
+                mergedFrom: "Hợp nhất Đắk Lắk + Phú Yên",
+                regionCode: "V4", regionName: "Tây Nguyên - Duyên hải Nam Trung Bộ",
+                color: "#2CE5C3",
+                x: 9.0, z: 11.5,
+                polygon: [[4.8,9.0],[14.2,9.2],[14.5,13.8],[5.2,13.5]],
+                hubs: [
+                    { name: "Buôn Ma Thuột", x: 7.0, z: 12.0 },
+                    { name: "Tuy Hòa", x: 13.2, z: 11.2 }
+                ],
+                landmarkType: "coffee_ganhdadia",
+                transport: ["Sân bay Buôn Ma Thuột & Sân bay Tuy Hòa", "Cao tốc Khánh Hòa - Buôn Ma Thuột, Quốc lộ 29 kết nối Rừng - Biển"],
+                attractions: [
+                    { name: "Bảo tàng Thế giới Cà phê, Khu du lịch Buôn Đôn, Hồ Lắk & Thác Dray Nur", cluster: "Cụm Thủ phủ Cà phê (Đắk Lắk)", desc: "Không gian văn hóa Cồng chiêng Tây Nguyên (UNESCO), Vườn quốc gia Yok Đôn và kiến trúc nhà dài Ê-đê." },
+                    { name: "Danh thắng Quốc gia đặc biệt Gành Đá Đĩa, Mũi Điện & Tháp Nghinh Phong", cluster: "Cụm Xứ sở Hoa vàng cỏ xanh (Phú Yên)", desc: "Kiệt tác đá bazan hình lăng trụ Gành Đá Đĩa, Mũi Điện (nơi đón ánh bình minh sớm trên đất liền), Vịnh Vũng Rô và Đầm Ô Loan." }
+                ],
+                cuisine: ["Cà phê Buôn Ma Thuột", "Gà nướng & Cơm lam Bản Đôn", "Mắt cá ngừ đại dương Phú Yên", "Sò huyết Đầm Ô Loan", "Bơ sáp Đắk Lắk"],
+                routeAdvice: "Sự giao thoa độc đáo giữa 'Thủ phủ Cà phê & Đại ngàn Tây Nguyên (Buôn Ma Thuột)' và 'Bờ biển Di sản Địa chất Gành Đá Đĩa (Tuy Hòa)'.",
+                quiz: {
+                    q: "Danh thắng Quốc gia đặc biệt nào thuộc tỉnh Đắk Lắk mới (địa phận Phú Yên cũ) được hình thành từ các cột đá bazan lăng trụ xếp chồng lên nhau sát bờ biển?",
+                    options: ["Gành Đá Đĩa", "Eo Gió", "Hang Rái", "Mũi Né"],
+                    ans: 0,
+                    explain: "Gành Đá Đĩa (Tuy An, Phú Yên cũ) là hiện tượng địa chất núi lửa phun trào gặp nước biển lạnh tạo thành các khối đá lăng trụ độc đáo."
+                }
+            },
+            {
+                id: "VN-26", stt: 26, name: "Lâm Đồng",
+                mergedFrom: "Hợp nhất Lâm Đồng + Đắk Nông + Bình Thuận (gồm Đảo Phú Quý)",
+                regionCode: "V4", regionName: "Tây Nguyên - Duyên hải Nam Trung Bộ",
+                color: "#F5C71A",
+                x: 8.2, z: 18.2,
+                polygon: [[5.2,13.8],[10.5,14.5],[11.5,22.2],[6.2,21.5]],
+                hubs: [
+                    { name: "Gia Nghĩa", x: 6.5, z: 15.5 },
+                    { name: "Đà Lạt", x: 9.0, z: 17.2 },
+                    { name: "Phan Thiết", x: 8.8, z: 21.0 }
+                ],
+                landmarkType: "dalat_flower",
+                transport: ["Sân bay Quốc tế Liên Khương & Sân bay Phan Thiết", "Cao tốc Dầu Giây - Vĩnh Hảo - Phan Thiết, Cao tốc Tân Phú - Bảo Lộc - Liên Khương"],
+                attractions: [
+                    { name: "TP. Ngàn hoa Đà Lạt (Hồ Xuân Hương, Langbiang, Quảng trường Lâm Viên)", cluster: "Cụm Cao nguyên Lâm Viên (Lâm Đồng)", desc: "Thành phố sáng tạo Âm nhạc của UNESCO với Thiền viện Trúc Lâm, Hồ Tuyền Lâm, Đồi chè Cầu Đất và Khu dự trữ sinh quyển Langbiang." },
+                    { name: "Công viên Địa chất Toàn cầu UNESCO Đắk Nông & Hồ Tà Đùng", cluster: "Cụm Địa chất Núi lửa (Đắk Nông)", desc: "Hệ thống hang động núi lửa Chư Bluk dài nhất Đông Nam Á và Hồ Tà Đùng được ví như 'Vịnh Hạ Long trên Tây Nguyên'." },
+                    { name: "Khu du lịch Quốc gia Mũi Né (Bàu Trắng, Đồi Cát Bay) & Đảo Phú Quý", cluster: "Cụm Biển & Tiểu sa mạc (Bình Thuận)", desc: "Thủ phủ resort biển Mũi Né, Hải đăng Kê Gà và hòn đảo Phú Quý hoang sơ giữa biển khơi." }
+                ],
+                cuisine: ["Lẩu gà lá é & Bánh căn Đà Lạt", "Dâu tây, Atiso & Rượu vang Đà Lạt", "Bơ sáp Đắk Nông", "Lẩu thả Mũi Né", "Cua Huỳnh Đế Phú Quý"],
+                routeAdvice: "Tỉnh có diện tích lớn nhất và hệ sinh thái du lịch hoàn chỉnh bậc nhất cả nước: Tam giác vàng Đà Lạt (Núi hoa) - Gia Nghĩa (Hồ Tà Đùng) - Phan Thiết (Biển Mũi Né & Đảo Phú Quý).",
+                quiz: {
+                    q: "Tỉnh Lâm Đồng mới (hợp nhất Lâm Đồng, Đắk Nông, Bình Thuận) cho phép kết nối trực tiếp ba tâm điểm du lịch nổi tiếng nào?",
+                    options: [
+                        "Đà Lạt - Hồ Tà Đùng (Gia Nghĩa) - Biển Mũi Né (Phan Thiết)",
+                        "Sa Pa - Hạ Long - Cát Bà",
+                        "Nha Trang - Quy Nhơn - Hội An",
+                        "Vũng Tàu - Cần Thơ - Phú Quốc"
+                    ],
+                    ans: 0,
+                    explain: "Ba tâm điểm Đà Lạt, Gia Nghĩa và Phan Thiết cùng nằm trong tỉnh Lâm Đồng mới, kết nối cao nguyên ngàn hoa, công viên địa chất và biển đảo."
+                }
+            },
+
+            // ================= VÙNG 5: ĐÔNG NAM BỘ (3) =================
+            {
+                id: "VN-27", stt: 27, name: "Đồng Nai",
+                mergedFrom: "Hợp nhất Đồng Nai + Bình Phước",
+                regionCode: "V5", regionName: "Đông Nam Bộ",
+                color: "#10B981",
+                x: 4.5, z: 18.8,
+                polygon: [[2.5,14.5],[6.0,15.0],[6.2,22.2],[3.0,21.5]],
+                hubs: [
+                    { name: "Đồng Xoài", x: 4.2, z: 16.5 },
+                    { name: "Biên Hòa", x: 4.5, z: 20.8 }
+                ],
+                landmarkType: "tea_hills",
+                transport: ["Siêu Cảng Hàng không Quốc tế Long Thành", "Cao tốc TP.HCM - Long Thành - Dầu Giây, Cửa khẩu Quốc tế Hoa Lư"],
+                attractions: [
+                    { name: "Khu dự trữ sinh quyển thế giới Vườn Quốc gia Cát Tiên & Hồ Trị An", cluster: "Cụm Sinh thái Đồng Nai", desc: "Rừng nguyên sinh nhiệt đới Cát Tiên, Khu du lịch Bửu Long, Núi Chứa Chan và cắm trại ven Hồ Trị An." },
+                    { name: "Vườn Quốc gia Bù Gia Mập, Núi Bà Rá - Thác Mơ & Sóc Bom Bo", cluster: "Cụm Lịch sử & Văn hóa S'tiêng (Bình Phước)", desc: "Di tích Quốc gia đặc biệt Căn cứ Bộ chỉ huy Quân giải phóng miền Nam Việt Nam (Tà Thiết) và Trảng cỏ Bù Lạch." }
+                ],
+                cuisine: ["Bưởi đường lá cam Tân Triều (Gà hấp bưởi)", "Cá lăng Hồ Trị An", "Hạt điều Bình Phước", "Đọt mây nướng & Cơm lam Sóc Bom Bo"],
+                routeAdvice: "Cửa ngõ hàng không quốc tế mới của phía Nam (Sân bay Long Thành) kết hợp du lịch sinh thái rừng cuối tuần (Cát Tiên - Bù Gia Mập).",
+                quiz: {
+                    q: "Vườn quốc gia nào tại tỉnh Đồng Nai được UNESCO công nhận là Khu dự trữ sinh quyển thế giới với hệ sinh thái rừng nhiệt đới đất thấp quý hiếm?",
+                    options: ["Vườn quốc gia Cát Tiên", "Vườn quốc gia Cúc Phương", "Vườn quốc gia Ba Vì", "Vườn quốc gia Tràm Chim"],
+                    ans: 0,
+                    explain: "Vườn quốc gia Cát Tiên là Khu dự trữ sinh quyển thế giới tiêu biểu của vùng Đông Nam Bộ."
+                }
+            },
+            {
+                id: "VN-28", stt: 28, name: "Tây Ninh",
+                mergedFrom: "Hợp nhất Tây Ninh + Long An",
+                regionCode: "V5", regionName: "Đông Nam Bộ & Cửa ngõ ĐBSCL",
+                color: "#F5C71A",
+                x: 0.8, z: 20.8,
+                polygon: [[-1.0,17.2],[2.5,17.5],[2.6,23.8],[-1.2,23.2]],
+                hubs: [
+                    { name: "Tây Ninh", x: 0.8, z: 18.8 },
+                    { name: "Tân An", x: 1.2, z: 22.8 }
+                ],
+                landmarkType: "mountain_peak",
+                transport: ["Cao tốc TP.HCM - Mộc Bài, Cao tốc TP.HCM - Trung Lương", "Cửa khẩu Quốc tế Mộc Bài, Xa Mát, Cảng Quốc tế Long An"],
+                attractions: [
+                    { name: "Khu du lịch Quốc gia Núi Bà Đen & Tòa Thánh Cao Đài Tây Ninh", cluster: "Cụm Tâm linh & Nóc nhà Nam Bộ (Tây Ninh)", desc: "Đỉnh Núi Bà Đen cao 986m với Tượng Phật Bà Tây Bổ Đà Sơn bằng đồng cao nhất châu Á trên đỉnh núi, Hồ Dầu Tiếng và Trung ương Cục miền Nam." },
+                    { name: "Làng nổi Tân Lập & Khu du lịch Cánh đồng bất tận", cluster: "Cụm Sinh thái Đồng Tháp Mười (Long An)", desc: "Cung đường xuyên rừng tràm ngập nước Làng nổi Tân Lập và hệ sinh thái đất ngập nước vùng Đồng Tháp Mười." }
+                ],
+                cuisine: ["Bánh tráng phơi sương Trảng Bàng", "Muối tôm Tây Ninh", "Bò tơ Tây Ninh", "Lẩu mắm & Cá lóc nướng trui Long An", "Thanh long Châu Thành"],
+                routeAdvice: "Hành lang du lịch biên giới và sinh thái phía Tây TP.HCM: Từ đỉnh Núi Bà Đen hùng vĩ xuống miền sông nước Vàm Cỏ - Làng nổi Tân Lập.",
+                quiz: {
+                    q: "Ngọn núi nào tại Tây Ninh có độ cao 986m và được mệnh danh là 'Nóc nhà Nam Bộ'?",
+                    options: ["Núi Bà Đen", "Núi Cấm", "Núi Chứa Chan", "Núi Sam"],
+                    ans: 0,
+                    explain: "Núi Bà Đen (cao 986m) là đỉnh núi cao nhất khu vực Nam Bộ, thu hút hàng triệu lượt khách hành hương và tham quan mỗi năm."
+                }
+            },
+            {
+                id: "VN-29", stt: 29, name: "TP. Hồ Chí Minh",
+                mergedFrom: "Hợp nhất TP.HCM + Bình Dương + Bà Rịa - Vũng Tàu (gồm Đảo Côn Sơn)",
+                regionCode: "V5", regionName: "Đông Nam Bộ (Siêu Đô thị)",
+                color: "#0047BA",
+                x: 3.8, z: 23.0,
+                polygon: [[2.2,19.2],[4.2,19.5],[6.8,23.2],[4.8,24.8],[2.5,23.5]],
+                hubs: [
+                    { name: "Thủ Dầu Một", x: 2.8, z: 20.2 },
+                    { name: "TP. Hồ Chí Minh", x: 3.0, z: 22.2 },
+                    { name: "Bà Rịa", x: 5.5, z: 23.8 }
+                ],
+                landmarkType: "skyscraper",
+                transport: ["Cảng Hàng không Quốc tế Tân Sơn Nhất & Sân bay Côn Đảo", "Tuyến Metro số 1, Cảng biển Quốc tế Cái Mép - Thị Vải, Tàu cao tốc Bạch Đằng - Vũng Tàu - Côn Đảo"],
+                attractions: [
+                    { name: "Dinh Độc Lập, Chợ Bến Thành, Bến Nhà Rồng & Địa đạo Củ Chi", cluster: "Cụm Đô thị Sài Gòn - TP.HCM", desc: "Trung tâm kinh tế - văn hóa sôi động nhất cả nước, Phố đi bộ Nguyễn Huệ, Bảo tàng Chứng tích Chiến tranh và Khu dự trữ sinh quyển rừng ngập mặn Cần Giờ." },
+                    { name: "Biển Vũng Tàu, Hồ Tràm - Bình Châu & Đặc khu Du lịch Côn Đảo", cluster: "Cụm Nghỉ dưỡng Biển & Đảo (Bà Rịa - Vũng Tàu)", desc: "Bãi Sau Vũng Tàu, Tượng Chúa Kitô Vua, suối khoáng nóng Bình Châu và Khu di tích lịch sử Quốc gia đặc biệt - Vườn quốc gia Côn Đảo." },
+                    { name: "Khu du lịch Đại Nam & Làng nghề Gốm sứ - Sơn mài", cluster: "Cụm Văn hóa Bình Dương", desc: "Chùa Bà Thiên Hậu, Làng sơn mài Tương Bình Hiệp và vườn trái cây Lái Thiêu." }
+                ],
+                cuisine: ["Cơm tấm Sài Gòn", "Bánh mì & Hủ tiếu Nam Vang", "Bánh khọt Vũng Tàu", "Gỏi gà măng cụt Lái Thiêu", "Hạt bàng Côn Đảo"],
+                routeAdvice: "Siêu đô thị biển - công nghiệp - dịch vụ tầm cỡ khu vực châu Á, kết nối hoàn hảo du lịch MICE nội đô với nghỉ dưỡng biển Hồ Tràm - Vũng Tàu - Côn Đảo.",
+                quiz: {
+                    q: "Sau khi hợp nhất TP.HCM, Bình Dương và Bà Rịa - Vũng Tàu, quần đảo lịch sử và sinh thái nổi tiếng nào trực thuộc TP. Hồ Chí Minh mới?",
+                    options: ["Quần đảo Côn Đảo (Đảo Côn Sơn)", "Đảo Phú Quốc", "Đảo Lý Sơn", "Quần đảo Cát Bà"],
+                    ans: 0,
+                    explain: "Côn Đảo (Đảo Côn Sơn) thuộc Bà Rịa - Vũng Tàu cũ nay trở thành viên ngọc biển đảo của siêu đô thị TP. Hồ Chí Minh."
+                }
+            },
+
+            // ================= VÙNG 6: ĐỒNG BẰNG SÔNG CỬU LONG (5) =================
+            {
+                id: "VN-30", stt: 30, name: "Đồng Tháp",
+                mergedFrom: "Hợp nhất Đồng Tháp + Tiền Giang",
+                regionCode: "V6", regionName: "Đồng bằng sông Cửu Long",
+                color: "#F05A22",
+                x: -0.5, z: 24.5,
+                polygon: [[-3.2,22.8],[2.5,23.5],[2.8,25.5],[-2.5,25.2]],
+                hubs: [
+                    { name: "Cao Lãnh", x: -1.5, z: 24.0 },
+                    { name: "Mỹ Tho", x: 1.5, z: 24.8 }
+                ],
+                landmarkType: "lotus_house",
+                transport: ["Cao tốc TP.HCM - Trung Lương - Mỹ Thuận - Cao Lãnh", "Hành lang du lịch đường thủy Sông Tiền"],
+                attractions: [
+                    { name: "Vườn Quốc gia Tràm Chim, Làng hoa Sa Đéc & Khu di tích Xẻo Quýt", cluster: "Cụm Đất Sen Hồng (Đồng Tháp)", desc: "Khu Ramsar thế giới Tràm Chim (nơi cư trú của Sếu đầu đỏ), Nhà cổ Huỳnh Thủy Lê, Khu di tích Cụ Phó bảng Nguyễn Sinh Sắc và Gò Tháp." },
+                    { name: "Cù lao Thới Sơn (Tứ linh), Chùa Vĩnh Tràng & Làng cổ Đông Hòa Hiệp", cluster: "Cụm Miệt vườn Sông Tiền (Tiền Giang)", desc: "Đi xuồng ba lá dưới rạch dừa nước, thưởng thức trái cây miệt vườn, nghe Đờn ca tài tử và thăm Trại rắn Đồng Tâm." }
+                ],
+                cuisine: ["Hủ tiếu Mỹ Tho & Hủ tiếu Sa Đéc", "Ẩm thực từ Sen Đồng Tháp", "Nem Lai Vung", "Vú sữa Lò Rèn", "Xoài cát Hòa Lộc"],
+                routeAdvice: "Trục du lịch đường sông Tiền xuyên suốt từ Mỹ Tho - Cái Bè (Tiền Giang) lên Sa Đéc - Cao Lãnh - Tràm Chim (Đồng Tháp).",
+                quiz: {
+                    q: "Vườn quốc gia nào tại tỉnh Đồng Tháp là Khu Ramsar thế giới, nổi tiếng là nơi bảo tồn loài Sếu đầu đỏ quý hiếm?",
+                    options: ["Vườn quốc gia Tràm Chim", "Vườn quốc gia U Minh Hạ", "Vườn quốc gia Mũi Cà Mau", "Vườn quốc gia Phú Quốc"],
+                    ans: 0,
+                    explain: "Vườn quốc gia Tràm Chim (huyện Tam Nông, Đồng Tháp) là mẫu hình thu nhỏ của hệ sinh thái vùng Đồng Tháp Mười."
+                }
+            },
+            {
+                id: "VN-31", stt: 31, name: "Vĩnh Long",
+                mergedFrom: "Hợp nhất Vĩnh Long + Bến Tre + Trà Vinh",
+                regionCode: "V6", regionName: "Đồng bằng sông Cửu Long",
+                color: "#10B981",
+                x: 0.8, z: 27.2,
+                polygon: [[-0.8,25.5],[3.2,25.6],[2.8,29.0],[-0.5,28.5]],
+                hubs: [
+                    { name: "Vĩnh Long", x: 0.0, z: 26.5 },
+                    { name: "Bến Tre", x: 1.8, z: 26.2 },
+                    { name: "Trà Vinh", x: 1.2, z: 28.0 }
+                ],
+                landmarkType: "floating_market",
+                transport: ["Cầu Mỹ Thuận 1 & 2, Cầu Rạch Miễu 1 & 2, Cầu Cổ Chiên, Cầu Đại Ngãi", "Hệ thống sông Tiền - sông Cổ Chiên - sông Hậu"],
+                attractions: [
+                    { name: "Vương quốc Gốm đỏ Mang Thít & Cù lao An Bình", cluster: "Cụm Di sản Đương đại Vĩnh Long", desc: "Hàng trăm lò gạch gốm đỏ rực dọc dòng kênh Thầy Cai và mô hình Homestay miệt vườn tiên phong tại Cù lao An Bình." },
+                    { name: "Cồn Phụng, Cồn Quy & Không gian Xứ Dừa Bến Tre", cluster: "Cụm Miệt vườn Dừa (Bến Tre)", desc: "Du lịch sinh thái dưới tán dừa xanh, Làng hoa kiểng Chợ Lách và Khu di tích Danh nhân văn hóa thế giới Nguyễn Đình Chiểu." },
+                    { name: "Ao Bà Om, Chùa Âng, Chùa Hang & Cù lao Tân Quy", cluster: "Cụm Văn hóa Khmer (Trà Vinh)", desc: "Quần thể di tích danh thắng Ao Bà Om rợp bóng cây cổ thụ trăm năm và lễ hội Ok Om Bok." }
+                ],
+                cuisine: ["Kẹo dừa & Cơm dừa tôm rang Bến Tre", "Cá tai tượng chiên xù Vĩnh Long", "Bún nước lèo Trà Vinh", "Dừa sáp Cầu Kè", "Bưởi Năm Roi"],
+                routeAdvice: "Vùng đất 'Tam giang hội tụ' nằm giữa sông Tiền và sông Hậu vươn ra Biển Đông, kết hợp Văn hóa Miệt vườn Kinh - Khmer - Hoa.",
+                quiz: {
+                    q: "Địa danh nào tại Vĩnh Long nổi tiếng với hàng trăm lò gạch truyền thống nằm san sát bên dòng sông, được mệnh danh là 'Vương quốc Gốm đỏ'?",
+                    options: ["Mang Thít", "Bát Tràng", "Bàu Trúc", "Phù Lãng"],
+                    ans: 0,
+                    explain: "Làng nghề gạch gốm Mang Thít (Vĩnh Long) là di sản kiến trúc - làng nghề độc đáo bên dòng sông Cổ Chiên."
+                }
+            },
+            {
+                id: "VN-32", stt: 32, name: "TP. Cần Thơ",
+                mergedFrom: "Hợp nhất TP. Cần Thơ + Sóc Trăng + Hậu Giang",
+                regionCode: "V6", regionName: "Đồng bằng sông Cửu Long",
+                color: "#F5C71A",
+                x: -1.8, z: 28.8,
+                polygon: [[-3.2,26.2],[0.0,26.8],[0.5,31.0],[-2.8,30.2]],
+                hubs: [
+                    { name: "Cần Thơ", x: -1.5, z: 27.2 },
+                    { name: "Vị Thanh", x: -2.4, z: 28.5 },
+                    { name: "Sóc Trăng", x: -0.8, z: 30.0 }
+                ],
+                landmarkType: "floating_market",
+                transport: ["Cảng Hàng không Quốc tế Cần Thơ", "Cao tốc Cần Thơ - Cà Mau, Cao tốc Châu Đốc - Cần Thơ - Sóc Trăng", "Cảng biển Nước sâu Trần Đề, Tàu cao tốc Trần Đề - Côn Đảo"],
+                attractions: [
+                    { name: "Chợ nổi Cái Răng, Bến Ninh Kiều, Nhà cổ Bình Thủy & Cồn Sơn", cluster: "Cụm Đô thị Sông nước (Cần Thơ)", desc: "Di sản văn hóa phi vật thể quốc gia Chợ nổi Cái Răng trên sông Cần Thơ, Cầu đi bộ Ninh Kiều và du lịch cộng đồng Cồn Sơn (cá lóc bay)." },
+                    { name: "Chùa Dơi (Mahatup), Chùa Som Rong & Chùa Chén Kiểu", cluster: "Cụm Văn hóa Chùa Khmer & Lễ hội Đua ghe Ngo (Sóc Trăng)", desc: "Kiến trúc chùa Khmer độc đáo và Lễ hội Oóc Om Bóc - Đua ghe Ngo sôi động." },
+                    { name: "Khu bảo tồn thiên nhiên Lung Ngọc Hoàng", cluster: "Cụm Sinh thái Rừng tràm (Hậu Giang)", desc: "'Lá phổi xanh' của vùng Tây sông Hậu với hệ động thực vật đất ngập nước phong phú." }
+                ],
+                cuisine: ["Lẩu mắm & Bánh cống Cần Thơ", "Bánh pía Sóc Trăng", "Bún nước lèo Sóc Trăng", "Cá thát lát Hậu Giang", "Khóm Cầu Đúc"],
+                routeAdvice: "Thủ phủ trung tâm của toàn vùng ĐBSCL, nay có thêm cửa ngõ ra biển Đông và bến tàu cao tốc đi Côn Đảo tại Trần Đề (Sóc Trăng).",
+                quiz: {
+                    q: "Điểm tham quan nào tại TP. Cần Thơ là nơi giao thương nông sản miệt vườn trên sông vào mỗi buổi sáng sớm và đã được công nhận là Di sản Văn hóa Phi vật thể Quốc gia?",
+                    options: ["Chợ nổi Cái Răng", "Chợ Bến Thành", "Chợ Đông Ba", "Chợ Đầm"],
+                    ans: 0,
+                    explain: "Chợ nổi Cái Răng là nét văn hóa sông nước đặc trưng bậc nhất của TP. Cần Thơ và vùng Đồng bằng sông Cửu Long."
+                }
+            },
+            {
+                id: "VN-33", stt: 33, name: "An Giang",
+                mergedFrom: "Hợp nhất An Giang + Kiên Giang (gồm Đảo Phú Quốc, Hòn Sơn)",
+                regionCode: "V6", regionName: "Đồng bằng sông Cửu Long",
+                color: "#0047BA",
+                x: -4.8, z: 26.8,
+                polygon: [[-6.8,24.2],[-2.8,24.5],[-3.0,29.5],[-6.2,28.8]],
+                hubs: [
+                    { name: "Long Xuyên", x: -3.5, z: 25.8 },
+                    { name: "Rạch Giá", x: -4.8, z: 27.8 }
+                ],
+                landmarkType: "port_island",
+                transport: ["Cảng Hàng không Quốc tế Phú Quốc & Sân bay Rạch Giá", "Cao tốc Châu Đốc - Cần Thơ", "Tàu cao tốc Rạch Giá / Hà Tiên đi Phú Quốc, Nam Du, Hòn Sơn"],
+                attractions: [
+                    { name: "Thành phố Đảo Ngọc Phú Quốc, Quần đảo Nam Du, Bà Lụa & Hà Tiên", cluster: "Cụm Thiên đường Biển đảo Tây Nam (Kiên Giang)", desc: "Trung tâm nghỉ dưỡng - giải trí quốc tế Phú Quốc (Cáp treo Hòn Thơm, Grand World, Safari, Cầu Hôn), VQG U Minh Thượng và Hà Tiên thập cảnh." },
+                    { name: "Khu du lịch Quốc gia Núi Sam (Miếu Bà Chúa Xứ), Núi Cấm & Rừng tràm Trà Sư", cluster: "Cụm Tâm linh Thất Sơn & Mùa nước nổi (An Giang)", desc: "Lễ hội Vía Bà Chúa Xứ Núi Sam (Di sản UNESCO), Rừng tràm Trà Sư phủ bèo xanh mướt và văn hóa Chăm Châu Phong." }
+                ],
+                cuisine: ["Bún quậy & Gỏi cá trích Phú Quốc", "Nước mắm Phú Quốc", "Bún cá Châu Đốc", "Lẩu mắm & Đường thốt nốt An Giang"],
+                routeAdvice: "Sự kết hợp tạo nên sản phẩm độc nhất ở miền Tây: Hành hương Thất Sơn - Rừng tràm Trà Sư (Châu Đốc) rồi lên tàu cao tốc tại Hà Tiên/Rạch Giá ra Đảo Ngọc Phú Quốc.",
+                quiz: {
+                    q: "Lễ hội truyền thống nào tại Núi Sam (Châu Đốc, tỉnh An Giang) đã được UNESCO ghi danh là Di sản Văn hóa Phi vật thể Đại diện của Nhân loại?",
+                    options: [
+                        "Lễ hội Vía Bà Chúa Xứ Núi Sam",
+                        "Lễ hội Chùa Hương",
+                        "Lễ hội Đền Hùng",
+                        "Lễ hội Каtê"
+                    ],
+                    ans: 0,
+                    explain: "Lễ hội Vía Bà Chúa Xứ Núi Sam (An Giang) là di sản văn hóa phi vật thể tiêu biểu của cư dân vùng Nam Bộ."
+                }
+            },
+            {
+                id: "VN-34", stt: 34, name: "Cà Mau",
+                mergedFrom: "Hợp nhất Cà Mau + Bạc Liêu (gồm Đảo Hòn Khoai)",
+                regionCode: "V6", regionName: "Đồng bằng sông Cửu Long",
+                color: "#F05A22",
+                x: -3.8, z: 32.2,
+                polygon: [[-5.5,29.5],[-1.0,30.5],[-2.5,34.2],[-5.8,34.8]],
+                hubs: [
+                    { name: "Bạc Liêu", x: -1.8, z: 31.2 },
+                    { name: "Cà Mau", x: -4.2, z: 32.5 }
+                ],
+                landmarkType: "cape_ship",
+                transport: ["Sân bay Cà Mau", "Cao tốc Cần Thơ - Cà Mau - Đất Mũi, Quốc lộ 1A (Điểm cuối tại Năm Căn - Đất Mũi)"],
+                attractions: [
+                    { name: "Khu du lịch Quốc gia Mũi Cà Mau & Vườn Quốc gia U Minh Hạ", cluster: "Cụm Cực Nam Tổ quốc (Cà Mau)", desc: "Cột mốc tọa độ Quốc gia GPS 0001, Biểu tượng Con tàu Cà Mau no gió, Khu dự trữ sinh quyển thế giới Mũi Cà Mau và cụm đảo Hòn Khoai." },
+                    { name: "Cánh đồng Điện gió Bạc Liêu, Nhà Công tử Bạc Liêu & Khu lưu niệm Cao Văn Lầu", cluster: "Cụm Văn hóa Đờn ca tài tử (Bạc Liêu)", desc: "Nơi ra đời bản 'Dạ cổ hoài lang' của cố nhạc sĩ Cao Văn Lầu, Quán Âm Phật Đài (Mẹ Nam Hải) và Chùa Xiêm Cán." }
+                ],
+                cuisine: ["Cua biển Cà Mau", "Lẩu mắm & Mật ong rừng U Minh", "Cá thòi lòi nướng", "Bánh củ cải & Bún bò cay Bạc Liêu"],
+                routeAdvice: "Điểm kết thúc thiêng liêng của hành trình xuyên Việt từ Cột cờ Lũng Cú (Tuyên Quang) đến Mũi Cà Mau.",
+                quiz: {
+                    q: "Tại Khu du lịch Quốc gia Mũi Cà Mau (điểm cực Nam trên đất liền Việt Nam), cột mốc tọa độ quốc gia mang ký hiệu nào?",
+                    options: ["GPS 0001", "KM 0000", "VN 1000", "NAM 001"],
+                    ans: 0,
+                    explain: "Cột mốc tọa độ Quốc gia GPS 0001 đặt tại Đất Mũi (Ngọc Hiển, Cà Mau) là biểu tượng thiêng liêng nơi cực Nam Tổ quốc."
+                }
+            }
+        ];
+
+        // ARCHIPELAGOS & KEY ISLANDS SHOWN ON THE REFERENCE PDF MAP
+        const ISLANDS_DATA = [
+            { id: "IS-CATBA", name: "Cát Bà", parentProvinceId: "VN-13", x: 9.8, z: -33.0, color: "#34D399", isSovereign: false },
+            { id: "IS-CONCO", name: "Cồn Cỏ", parentProvinceId: "VN-19", x: 8.2, z: -10.2, color: "#F5C71A", isSovereign: false },
+            { id: "IS-HOANGSA", name: "Quần Đảo Hoàng Sa (TP. Đà Nẵng)", parentProvinceId: "VN-21", x: 22.0, z: -4.5, color: "#EF4444", isSovereign: true },
+            { id: "IS-LYSON", name: "Đảo Lý Sơn", parentProvinceId: "VN-22", x: 15.2, z: 0.8, color: "#2CE5C3", isSovereign: false },
+            { id: "IS-PHUQUY", name: "Đảo Phú Quý", parentProvinceId: "VN-26", x: 13.8, z: 22.2, color: "#F5C71A", isSovereign: false },
+            { id: "IS-TRUONGSA", name: "Quần Đảo Trường Sa (Khánh Hòa)", parentProvinceId: "VN-25", x: 24.0, z: 24.5, color: "#EF4444", isSovereign: true },
+            { id: "IS-CONSON", name: "Đảo Côn Sơn (Côn Đảo)", parentProvinceId: "VN-29", x: 3.2, z: 32.8, color: "#2CE5C3", isSovereign: false },
+            { id: "IS-PHUQUOC", name: "Đảo Phú Quốc", parentProvinceId: "VN-33", x: -9.8, z: 27.2, color: "#F05A22", isSovereign: false },
+            { id: "IS-HONSON", name: "Hòn Sơn", parentProvinceId: "VN-33", x: -7.5, z: 28.8, color: "#F59E0B", isSovereign: false },
+            { id: "IS-HONKHOAI", name: "Hòn Khoai", parentProvinceId: "VN-34", x: -4.2, z: 36.2, color: "#F5C71A", isSovereign: false }
+        ];
+
+        // TOUR BUILDER CHALLENGES
+        const TOUR_CHALLENGES = [
+            {
+                title: "Tuyến 1: Tam giác Di sản Đông Bắc & Kinh Bắc",
+                desc: "Khách quốc tế muốn đi tuyến 4N3Đ kết nối Di sản Vịnh Hạ Long - Quần đảo Cát Bà và vùng văn hóa Quan họ - Chùa Vĩnh Nghiêm. Hãy chọn lần lượt 3 tỉnh/thành trên bản đồ:",
+                targetIds: ["VN-09", "VN-13", "VN-11"],
+                targetNames: ["Quảng Ninh", "TP. Hải Phòng", "Bắc Ninh"]
+            },
+            {
+                title: "Tuyến 2: Con đường Di sản Miền Trung",
+                desc: "Thiết kế tuyến đường bộ xuyên qua 3 tỉnh/thành sở hữu Phong Nha - Kẻ Bàng, Cố đô Huế và Phố cổ Hội An - Cầu Vàng:",
+                targetIds: ["VN-19", "VN-20", "VN-21"],
+                targetNames: ["Quảng Trị", "TP. Huế", "TP. Đà Nẵng"]
+            },
+            {
+                title: "Tuyến 3: Hành trình Liên kết Rừng Hoa & Biển Đảo Nam Trung Bộ",
+                desc: "Kết nối tam giác du lịch: Nha Trang - Phan Rang (Khánh Hòa) ➔ Đà Lạt - Mũi Né (Lâm Đồng) ➔ Buôn Ma Thuột - Gành Đá Đĩa (Đắk Lắk):",
+                targetIds: ["VN-25", "VN-26", "VN-24"],
+                targetNames: ["Khánh Hòa", "Lâm Đồng", "Đắk Lắk"]
+            },
+            {
+                title: "Tuyến 4: Khám phá Chợ nổi - Thất Sơn - Cực Nam ĐBSCL",
+                desc: "Hành trình miền Tây Nam Bộ khởi hành từ Chợ nổi Cái Răng (TP. Cần Thơ) ➔ Rừng tràm Trà Sư & Đảo Phú Quốc (An Giang) ➔ Đất Mũi (Cà Mau):",
+                targetIds: ["VN-32", "VN-33", "VN-34"],
+                targetNames: ["TP. Cần Thơ", "An Giang", "Cà Mau"]
+            }
+        ];
+
+        /***********************************************************************
+         * 2. APPLICATION STATE VARIABLES
+         ***********************************************************************/
+        let currentProvince = PROVINCES_34[8]; // Default: Quảng Ninh (STT 09)
+        let originProvince = PROVINCES_34[11]; // Default Origin: Hà Nội (STT 12)
+        let currentTab = "attractions";
+        let currentTransportMode = "road"; // 'road' | 'air' | 'water'
+        let gameMode = "explore"; // 'explore' | 'challenge'
+        let showMapLabels = true;
+        let chaseCameraActive = false;
+        let stampedProvinces = new Set(["VN-09", "VN-12"]); // Initial demo stamps
+        let currentChallengeIdx = 0;
+        let challengeSelectedIds = [];
+        let isTourGuideSpeaking = false;
+
+        /***********************************************************************
+         * 3. WEB AUDIO API PROCEDURAL VIETNAMESE PENTATONIC MUSIC & SFX ENGINE
+         ***********************************************************************/
+        let audioCtx = null;
+        let isMusicPlaying = false;
+        let musicStyle = "pentatonic";
+        let musicInterval = null;
+        let melodyStep = 0;
+
+        // Vietnamese Pentatonic Scale (Hò - Xự - Xang - Xê - Cống) frequencies in Hz
+        const SCALES = {
+            pentatonic: [261.63, 293.66, 349.23, 392.00, 440.00, 523.25, 587.33, 698.46, 783.99],
+            journey:    [293.66, 329.63, 392.00, 440.00, 493.88, 587.33, 659.25, 783.99],
+            zen:        [196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00]
+        };
+
+        const MELODY_PATTERNS = [0, 2, 3, 4, 5, 4, 2, 1, 3, 5, 6, 5, 3, 2, 0, 4];
+
+        function initAudioEngine() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+        }
+
+        function playPluckNote(freq, duration = 1.6, volume = 0.08, waveType = "triangle") {
+            if (!audioCtx || !isMusicPlaying) return;
+            const now = audioCtx.currentTime;
+
+            // Main string oscillator (Đàn tranh / Đàn bầu warm timbre)
+            const osc = audioCtx.createOscillator();
+            const subOsc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = waveType;
+            osc.frequency.setValueAtTime(freq, now);
+            // Subtle pitch bend characteristic of Vietnamese traditional instruments
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.006, now + 0.18);
+            osc.frequency.exponentialRampToValueAtTime(freq, now + 0.45);
+
+            subOsc.type = "sine";
+            subOsc.frequency.setValueAtTime(freq * 0.5, now);
+
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(1800, now);
+            filter.frequency.exponentialRampToValueAtTime(420, now + duration);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(volume, now + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0008, now + duration);
+
+            osc.connect(filter);
+            subOsc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            subOsc.start(now);
+            osc.stop(now + duration);
+            subOsc.stop(now + duration);
+        }
+
+        function playSfx(type) {
+            try {
+                initAudioEngine();
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === "click") {
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(780, now + 0.09);
+                    gain.gain.setValueAtTime(0.06, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === "depart") {
+                    osc.type = "triangle";
+                    osc.frequency.setValueAtTime(330, now);
+                    osc.frequency.exponentialRampToValueAtTime(660, now + 0.35);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === "stamp") {
+                    // Celebratory chord
+                    [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.type = "triangle";
+                        o.frequency.setValueAtTime(f, now + idx * 0.07);
+                        g.gain.setValueAtTime(0.08, now + idx * 0.07);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.5);
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.start(now + idx * 0.07);
+                        o.stop(now + idx * 0.07 + 0.5);
+                    });
+                }
+            } catch (e) {
+                // Ignore audio context restrictions before user gesture
+            }
+        }
+
+        function toggleBackgroundMusic() {
+            initAudioEngine();
+            isMusicPlaying = !isMusicPlaying;
+            const icon = document.getElementById("music-icon");
+            const text = document.getElementById("music-status-text");
+            const eq = document.getElementById("music-eq");
+
+            if (isMusicPlaying) {
+                icon.className = "fa-solid fa-volume-high text-emerald-400";
+                text.textContent = "Nhạc nền: Bật";
+                eq.classList.add("playing");
+                startMusicScheduler();
+            } else {
+                icon.className = "fa-solid fa-volume-xmark text-slate-400";
+                text.textContent = "Nhạc nền: Tắt";
+                eq.classList.remove("playing");
+                if (musicInterval) clearInterval(musicInterval);
+            }
+        }
+
+        function changeMusicStyle(style) {
+            musicStyle = style;
+            if (isMusicPlaying) {
+                startMusicScheduler();
+            } else {
+                toggleBackgroundMusic();
+            }
+        }
+
+        function startMusicScheduler() {
+            if (musicInterval) clearInterval(musicInterval);
+            const scale = SCALES[musicStyle] || SCALES.pentatonic;
+            const tempoMs = musicStyle === "journey" ? 360 : musicStyle === "zen" ? 720 : 480;
+
+            musicInterval = setInterval(() => {
+                if (!isMusicPlaying) return;
+                // Auto-duck background music volume when the Female Tour Guide is narrating
+                const baseVol = isTourGuideSpeaking ? 0.018 : 0.065;
+                const bassVol = isTourGuideSpeaking ? 0.010 : 0.04;
+
+                const patternIdx = MELODY_PATTERNS[melodyStep % MELODY_PATTERNS.length];
+                const noteFreq = scale[patternIdx % scale.length];
+                const wave = musicStyle === "zen" ? "sine" : "triangle";
+                playPluckNote(noteFreq, musicStyle === "zen" ? 2.4 : 1.5, baseVol, wave);
+
+                // Occasional harmony bass note on beat 0 and 8
+                if (melodyStep % 4 === 0) {
+                    playPluckNote(scale[0] * 0.5, 2.5, bassVol, "sine");
+                }
+                melodyStep++;
+            }, tempoMs);
+        }
+
+        /***********************************************************************
+         * 4. THREE.JS 3D SCENE, MAP EXTRUSION, LANDMARKS & VEHICLE ENGINE
+         ***********************************************************************/
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let oceanMesh, mapGroup, landmarkGroup, routeGroup, vehicleGroup;
+        const provinceMeshes = [];
+        const provinceMeshMap = {};
+        const labelElements = [];
+
+        // Camera smooth animation state
+        let camAnim = {
+            active: false,
+            startPos: new THREE.Vector3(),
+            endPos: new THREE.Vector3(),
+            startTarget: new THREE.Vector3(),
+            endTarget: new THREE.Vector3(),
+            progress: 0,
+            duration: 1.2
+        };
+
+        // Vehicle travel animation state
+        let activeTravel = {
+            active: false,
+            curve: null,
+            progress: 0,
+            speed: 0.0045,
+            mode: "road",
+            origin: null,
+            destination: null,
+            distanceKm: 0,
+            vehicleMesh: null
+        };
+
+        function initThreeScene() {
+            const container = document.getElementById("canvas-container");
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x040d1a);
+            scene.fog = new THREE.FogExp2(0x040d1a, 0.0055);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 400);
+            camera.position.set(12, 58, 35);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.maxPolarAngle = Math.PI / 2.15;
+            controls.minDistance = 8;
+            controls.maxDistance = 135;
+            controls.target.set(3, 0, -5);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.78);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.95);
+            dirLight.position.set(35, 65, 30);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.45);
+            rimLight.position.set(-40, 30, -30);
+            scene.add(rimLight);
+
+            // Groups
+            mapGroup = new THREE.Group();
+            landmarkGroup = new THREE.Group();
+            routeGroup = new THREE.Group();
+            vehicleGroup = new THREE.Group();
+            scene.add(mapGroup);
+            scene.add(landmarkGroup);
+            scene.add(routeGroup);
+            scene.add(vehicleGroup);
+
+            // Build Ocean & Grid
+            buildOceanEnvironment();
+            // Build 34 Extruded Provinces + Hubs + 3D Landmarks
+            build34ProvincesMap();
+            // Build Islands & Archipelagos (Hoàng Sa, Trường Sa, Phú Quốc, Côn Sơn, Lý Sơn, Cát Bà...)
+            buildIslandsAndArchipelagos();
+
+            // Raycaster for Mouse/Touch Interaction
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            renderer.domElement.addEventListener("pointermove", onPointerMove);
+            renderer.domElement.addEventListener("pointerdown", onPointerDown);
+            renderer.domElement.addEventListener("pointerup", onPointerUp);
+            window.addEventListener("resize", onWindowResize);
+        }
+
+        function buildOceanEnvironment() {
+            const oceanGeo = new THREE.PlaneGeometry(260, 260, 48, 48);
+            const oceanMat = new THREE.MeshPhongMaterial({
+                color: 0x07213c,
+                emissive: 0x031122,
+                specular: 0x38bdf8,
+                shininess: 45,
+                flatShading: true
+            });
+            oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+            oceanMesh.rotation.x = -Math.PI / 2;
+            oceanMesh.position.y = -0.35;
+            oceanMesh.receiveShadow = true;
+            scene.add(oceanMesh);
+
+            // Subtle Nautical Coordinate Grid
+            const gridHelper = new THREE.GridHelper(220, 44, 0x1e3a8a, 0x0f294a);
+            gridHelper.position.y = -0.32;
+            scene.add(gridHelper);
+        }
+
+        function build34ProvincesMap() {
+            const labelsContainer = document.getElementById("labels-container");
+
+            PROVINCES_34.forEach((prov) => {
+                // Create 2D Shape from polygon coordinates (x, -z because Shape is in XY plane before X-rotation)
+                const shape = new THREE.Shape();
+                prov.polygon.forEach((pt, idx) => {
+                    if (idx === 0) shape.moveTo(pt[0], -pt[1]);
+                    else shape.lineTo(pt[0], -pt[1]);
+                });
+                shape.closePath();
+
+                const extrudeSettings = {
+                    depth: 1.25,
+                    bevelEnabled: true,
+                    bevelSegments: 2,
+                    steps: 1,
+                    bevelSize: 0.12,
+                    bevelThickness: 0.15
+                };
+
+                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                geo.rotateX(-Math.PI / 2);
+
+                const baseColor = new THREE.Color(prov.color);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: baseColor,
+                    roughness: 0.42,
+                    metalness: 0.12,
+                    emissive: baseColor.clone().multiplyScalar(0.08)
+                });
+
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                mesh.userData = { type: "province", province: prov, baseColor: baseColor, targetY: 0 };
+
+                // Border outline for clear administrative separation
+                const edges = new THREE.EdgesGeometry(geo);
+                const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 });
+                const wireframe = new THREE.LineSegments(edges, lineMat);
+                mesh.add(wireframe);
+
+                mapGroup.add(mesh);
+                provinceMeshes.push(mesh);
+                provinceMeshMap[prov.id] = mesh;
+
+                // Create Concentric Circle Hub Markers (matching the reference PDF map)
+                prov.hubs.forEach((hub) => {
+                    const hubGroup = new THREE.Group();
+                    hubGroup.position.set(hub.x, 1.42, hub.z);
+
+                    const ringGeo = new THREE.RingGeometry(0.24, 0.38, 20);
+                    ringGeo.rotateX(-Math.PI / 2);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+                    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+
+                    const dotGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.18, 16);
+                    const dotMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+                    const dotMesh = new THREE.Mesh(dotGeo, dotMat);
+
+                    hubGroup.add(ringMesh, dotMesh);
+                    mesh.add(hubGroup);
+                });
+
+                // Build 3D Procedural Landmark Miniature on the province
+                const landmark = createProceduralLandmark(prov.landmarkType);
+                landmark.position.set(prov.x, 1.4, prov.z);
+                mesh.add(landmark);
+
+                // Create HTML Floating Label for each of the 34 provinces
+                const labelDiv = document.createElement("div");
+                labelDiv.className = "province-label px-1.5 py-0.5 rounded bg-slate-950/75 border border-white/20 text-[10px] font-bold text-white flex items-center gap-1 shadow";
+                labelDiv.innerHTML = `<span class="w-1.5 h-1.5 rounded-full" style="background:${prov.color}"></span><span>${prov.name}</span>`;
+                labelsContainer.appendChild(labelDiv);
+
+                labelElements.push({
+                    el: labelDiv,
+                    pos: new THREE.Vector3(prov.x, 2.3, prov.z),
+                    isIsland: false,
+                    provinceId: prov.id
+                });
+            });
+        }
+
+        function createProceduralLandmark(type) {
+            const g = new THREE.Group();
+            const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.25, metalness: 0.7 });
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.7 });
+            const redMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 });
+            const greenMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.6 });
+            const cyanMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.5 });
+
+            if (type === "halong") {
+                // Limestone Karsts & Cruise Boat
+                const k1 = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.45, 6), greenMat);
+                k1.position.set(-0.3, 0.7, 0);
+                const k2 = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.1, 6), greenMat);
+                k2.position.set(0.35, 0.55, 0.2);
+                const boat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.22), goldMat);
+                boat.position.set(0, 0.15, 0.45);
+                g.add(k1, k2, boat);
+            } else if (type === "khue_van_cac" || type === "imperial_gate") {
+                // Traditional Pavilion / Gate
+                const base = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.35, 0.75), stoneMat);
+                base.position.y = 0.17;
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.55), redMat);
+                body.position.y = 0.55;
+                const roof = new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.4, 4), goldMat);
+                roof.position.y = 0.95;
+                roof.rotation.y = Math.PI / 4;
+                g.add(base, body, roof);
+            } else if (type === "flagpole") {
+                // Lũng Cú Flagpole
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.45, 8), stoneMat);
+                base.position.y = 0.22;
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 1.4, 8), goldMat);
+                pole.position.y = 0.9;
+                const flag = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.32, 0.04), redMat);
+                flag.position.set(0.25, 1.45, 0);
+                g.add(base, pole, flag);
+            } else if (type === "golden_bridge") {
+                // Curved Golden Bridge
+                const arch = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.09, 8, 20, Math.PI), goldMat);
+                arch.position.y = 0.1;
+                const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.6, 8), stoneMat);
+                p1.position.set(-0.3, 0.3, 0);
+                const p2 = p1.clone();
+                p2.position.set(0.3, 0.3, 0);
+                g.add(arch, p1, p2);
+            } else if (type === "skyscraper") {
+                // Landmark 81 spire
+                const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.9, 0.45), cyanMat);
+                b1.position.y = 0.45;
+                const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.45, 0.3), cyanMat);
+                b2.position.y = 0.72;
+                const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.08, 0.6, 8), goldMat);
+                spire.position.y = 1.65;
+                g.add(b1, b2, spire);
+            } else if (type === "cape_ship") {
+                // Mũi Cà Mau Ship & Wind Turbine
+                const hull = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.95, 4), redMat);
+                hull.rotation.z = -Math.PI / 2;
+                hull.position.y = 0.3;
+                const sail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.85, 0.4), goldMat);
+                sail.position.set(0, 0.65, 0);
+                g.add(hull, sail);
+            } else {
+                // Pagoda / Mountain / Cultural Tower
+                const t1 = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 0.9, 6), goldMat);
+                t1.position.y = 0.45;
+                const top = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.5, 6), redMat);
+                top.position.y = 1.1;
+                g.add(t1, top);
+            }
+            return g;
+        }
+
+        function buildIslandsAndArchipelagos() {
+            const labelsContainer = document.getElementById("labels-container");
+
+            ISLANDS_DATA.forEach((isl) => {
+                const islandGroup = new THREE.Group();
+                islandGroup.position.set(isl.x, 0, isl.z);
+
+                const islColor = new THREE.Color(isl.color);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: islColor,
+                    roughness: 0.4,
+                    emissive: islColor.clone().multiplyScalar(0.2)
+                });
+
+                if (isl.isSovereign) {
+                    // Render Archipelago Cluster (Hoàng Sa & Trường Sa) with Multiple Red Coral Islands + Sovereign Marker
+                    const offsets = [
+                        [0, 0, 0.9], [-1.2, -0.8, 0.6], [1.1, -0.5, 0.65],
+                        [-0.8, 1.0, 0.55], [1.3, 0.9, 0.6], [0.2, 1.6, 0.5], [-1.6, 0.2, 0.5]
+                    ];
+                    offsets.forEach(([dx, dz, scale]) => {
+                        const m = new THREE.Mesh(new THREE.CylinderGeometry(0.45 * scale, 0.65 * scale, 0.7, 7), mat);
+                        m.position.set(dx, 0.2, dz);
+                        m.userData = { type: "island", island: isl };
+                        islandGroup.add(m);
+                        provinceMeshes.push(m);
+                    });
+
+                    // Sovereign Flag & Lighthouse Marker
+                    const pillar = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.18, 0.26, 2.2, 12),
+                        new THREE.MeshStandardMaterial({ color: 0xf8fafc })
+                    );
+                    pillar.position.y = 1.1;
+                    const flag = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.95, 0.6, 0.08),
+                        new THREE.MeshBasicMaterial({ color: 0xef4444 })
+                    );
+                    flag.position.set(0.48, 1.95, 0);
+                    islandGroup.add(pillar, flag);
+                } else {
+                    // Single Island Mesh (Phú Quốc, Côn Sơn, Lý Sơn, Phú Quý, Cát Bà, Cồn Cỏ...)
+                    const radius = isl.id === "IS-PHUQUOC" ? 0.95 : 0.55;
+                    const m = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.8, radius, 0.85, 8), mat);
+                    m.position.y = 0.25;
+                    m.userData = { type: "island", island: isl };
+                    islandGroup.add(m);
+                    provinceMeshes.push(m);
+                }
+
+                mapGroup.add(islandGroup);
+
+                // HTML Floating Island Label
+                const lbl = document.createElement("div");
+                lbl.className = isl.isSovereign
+                    ? "island-label px-2.5 py-1 rounded-lg bg-red-950/90 border border-red-400 text-[11px] font-extrabold text-amber-300 shadow-lg"
+                    : "island-label px-1.5 py-0.5 rounded bg-slate-900/85 border border-cyan-400/40 text-[10px] font-semibold text-cyan-200";
+                lbl.innerHTML = isl.isSovereign
+                    ? `<i class="fa-solid fa-star text-amber-400 mr-1"></i>${isl.name}`
+                    : `🏝️ ${isl.name}`;
+                labelsContainer.appendChild(lbl);
+
+                labelElements.push({
+                    el: lbl,
+                    pos: new THREE.Vector3(isl.x, isl.isSovereign ? 2.8 : 1.5, isl.z),
+                    isIsland: true
+                });
+            });
+        }
+
+        /***********************************************************************
+         * 5. 3D VEHICLE BUILDER & INTER-PROVINCIAL ROUTE ANIMATION
+         ***********************************************************************/
+        function create3DVehicleMesh(mode) {
+            const g = new THREE.Group();
+            if (mode === "air") {
+                // 3D Airplane
+                const body = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.28, 1.6, 12),
+                    new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.4, roughness: 0.2 })
+                );
+                body.rotation.x = Math.PI / 2;
+                const wings = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.7, 0.06, 0.38),
+                    new THREE.MeshStandardMaterial({ color: 0x38bdf8 })
+                );
+                const tail = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.08, 0.45, 0.35),
+                    new THREE.MeshStandardMaterial({ color: 0xf59e0b })
+                );
+                tail.position.set(0, 0.22, -0.6);
+                g.add(body, wings, tail);
+            } else if (mode === "water") {
+                // 3D Cruise Ship / Express Train
+                const hull = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.55, 0.35, 1.35),
+                    new THREE.MeshStandardMaterial({ color: 0x10b981 })
+                );
+                const deck = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.42, 0.28, 0.85),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff })
+                );
+                deck.position.y = 0.3;
+                g.add(hull, deck);
+            } else {
+                // 3D Luxury Tour Coach (Xe du lịch)
+                const coach = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.52, 0.45, 1.2),
+                    new THREE.MeshStandardMaterial({ color: 0xf59e0b })
+                );
+                coach.position.y = 0.25;
+                const cabin = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.54, 0.22, 0.85),
+                    new THREE.MeshStandardMaterial({ color: 0x0284c7 })
+                );
+                cabin.position.y = 0.32;
+                g.add(coach, cabin);
+            }
+            return g;
+        }
+
+        function launch3DJourney(fromProv, toProv, mode) {
+            if (!fromProv || !toProv) return;
+            playSfx("depart");
+
+            // Clear previous route & vehicle
+            while (routeGroup.children.length > 0) routeGroup.remove(routeGroup.children[0]);
+            while (vehicleGroup.children.length > 0) vehicleGroup.remove(vehicleGroup.children[0]);
+
+            const startPt = new THREE.Vector3(fromProv.x, 1.55, fromProv.z);
+            const endPt = new THREE.Vector3(toProv.x, 1.55, toProv.z);
+            const dist3D = startPt.distanceTo(endPt);
+
+            // Real-world approximate distance in km
+            const approxKm = Math.max(45, Math.round(dist3D * 22));
+
+            // Arc height depends on transport mode
+            const arcHeight = mode === "air" ? Math.min(14, Math.max(4.5, dist3D * 0.32)) : 2.1;
+            const midPt = new THREE.Vector3().addVectors(startPt, endPt).multiplyScalar(0.5);
+            midPt.y += arcHeight;
+
+            const curve = new THREE.QuadraticBezierCurve3(startPt, midPt, endPt);
+
+            // Glowing Trajectory Tube
+            const tubeGeo = new THREE.TubeGeometry(curve, 64, 0.11, 8, false);
+            const tubeColor = mode === "air" ? 0x38bdf8 : mode === "water" ? 0x34d399 : 0xfbbf24;
+            const tubeMat = new THREE.MeshBasicMaterial({ color: tubeColor, transparent: true, opacity: 0.85 });
+            const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+            routeGroup.add(tubeMesh);
+
+            // Create Vehicle Mesh
+            const vMesh = create3DVehicleMesh(mode);
+            vehicleGroup.add(vMesh);
+
+            activeTravel = {
+                active: true,
+                curve: curve,
+                progress: 0,
+                speed: mode === "air" ? 0.0065 : 0.0045,
+                mode: mode,
+                origin: fromProv,
+                destination: toProv,
+                distanceKm: approxKm,
+                vehicleMesh: vMesh
+            };
+
+            // Show Telemetry UI
+            const telemetryBox = document.getElementById("journey-telemetry");
+            telemetryBox.classList.remove("hidden");
+            document.getElementById("telemetry-route").textContent = `${fromProv.name} ➔ ${toProv.name}`;
+            document.getElementById("telemetry-dist").textContent = `~${approxKm} km`;
+            const modeLabel = mode === "air" ? "Đường bay nội địa" : mode === "water" ? "Tuyến Đường thủy / Đường sắt" : "Tuyến Cao tốc / Quốc lộ";
+            document.getElementById("telemetry-status").textContent = `${modeLabel}: Khởi hành từ ${fromProv.hubs[0].name} đến ${toProv.hubs[0].name}...`;
+
+            // If Chase Cam is not active, smoothly frame both provinces
+            if (!chaseCameraActive) {
+                flyCameraTo(
+                    new THREE.Vector3(midPt.x + 14, Math.max(18, dist3D * 0.85), midPt.z + 16),
+                    new THREE.Vector3(midPt.x, 1, midPt.z)
+                );
+            }
+        }
+
+        function startJourneyFromUI() {
+            const origId = document.getElementById("select-origin").value;
+            const destId = document.getElementById("select-destination").value;
+            const fromP = PROVINCES_34.find(p => p.id === origId);
+            const toP = PROVINCES_34.find(p => p.id === destId);
+            if (!fromP || !toP) return;
+
+            originProvince = fromP;
+            selectProvince(toP, false);
+            launch3DJourney(fromP, toP, currentTransportMode);
+        }
+
+        function travelToSelectedProvince() {
+            if (originProvince.id === currentProvince.id) {
+                flyCameraToProvince(currentProvince);
+                return;
+            }
+            document.getElementById("select-origin").value = originProvince.id;
+            document.getElementById("select-destination").value = currentProvince.id;
+            launch3DJourney(originProvince, currentProvince, currentTransportMode);
+        }
+
+        /***********************************************************************
+         * 6. CAMERA NAVIGATION & RAYCASTING INTERACTION
+         ***********************************************************************/
+        function flyCameraTo(targetCamPos, targetLookAt) {
+            camAnim.active = true;
+            camAnim.startPos.copy(camera.position);
+            camAnim.endPos.copy(targetCamPos);
+            camAnim.startTarget.copy(controls.target);
+            camAnim.endTarget.copy(targetLookAt);
+            camAnim.progress = 0;
+        }
+
+        function flyCameraToProvince(prov) {
+            const targetLook = new THREE.Vector3(prov.x, 1.2, prov.z);
+            const targetPos = new THREE.Vector3(prov.x + 8.5, 14.5, prov.z + 11.5);
+            flyCameraTo(targetPos, targetLook);
+        }
+
+        function resetCameraOverview() {
+            chaseCameraActive = false;
+            updateChaseCamButton();
+            flyCameraTo(new THREE.Vector3(12, 58, 35), new THREE.Vector3(3, 0, -5));
+        }
+
+        let pointerDownPos = { x: 0, y: 0 };
+        let hoveredMesh = null;
+
+        function onPointerDown(e) {
+            pointerDownPos.x = e.clientX;
+            pointerDownPos.y = e.clientY;
+        }
+
+        function onPointerMove(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(provinceMeshes, false);
+            const tooltip = document.getElementById("hover-tooltip");
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                document.body.style.cursor = "pointer";
+
+                let prov = null;
+                if (hit.userData.type === "province") {
+                    prov = hit.userData.province;
+                } else if (hit.userData.type === "island") {
+                    const isl = hit.userData.island;
+                    prov = PROVINCES_34.find(p => p.id === isl.parentProvinceId);
+                }
+
+                if (prov) {
+                    if (hoveredMesh && hoveredMesh !== provinceMeshMap[prov.id]) {
+                        hoveredMesh.userData.targetY = hoveredMesh.userData.province.id === currentProvince.id ? 0.55 : 0;
+                    }
+                    hoveredMesh = provinceMeshMap[prov.id];
+                    if (hoveredMesh) hoveredMesh.userData.targetY = 0.65;
+
+                    // Update Tooltip
+                    tooltip.classList.remove("hidden");
+                    tooltip.style.left = `${Math.min(window.innerWidth - 260, e.clientX + 16)}px`;
+                    tooltip.style.top = `${Math.max(16, e.clientY - 20)}px`;
+                    document.getElementById("tooltip-color").style.backgroundColor = prov.color;
+                    document.getElementById("tooltip-name").textContent = `${prov.stt}. ${prov.name}`;
+                    document.getElementById("tooltip-merged").textContent = prov.mergedFrom;
+                    document.getElementById("tooltip-hubs").textContent = `Tâm điểm: ${prov.hubs.map(h => h.name).join(" • ")}`;
+
+                    const stampBadge = document.getElementById("tooltip-stamped");
+                    if (stampedProvinces.has(prov.id)) stampBadge.classList.remove("hidden");
+                    else stampBadge.classList.add("hidden");
+                }
+            } else {
+                document.body.style.cursor = "grab";
+                tooltip.classList.add("hidden");
+                if (hoveredMesh) {
+                    hoveredMesh.userData.targetY = hoveredMesh.userData.province.id === currentProvince.id ? 0.55 : 0;
+                    hoveredMesh = null;
+                }
+            }
+        }
+
+        function onPointerUp(e) {
+            const moveDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+            if (moveDist > 6) return; // Dragging camera, not clicking
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(provinceMeshes, false);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                let prov = null;
+                if (hit.userData.type === "province") {
+                    prov = hit.userData.province;
+                } else if (hit.userData.type === "island") {
+                    prov = PROVINCES_34.find(p => p.id === hit.userData.island.parentProvinceId);
+                }
+
+                if (prov) {
+                    playSfx("click");
+                    if (gameMode === "challenge") {
+                        addProvinceToChallenge(prov);
+                    }
+                    selectProvince(prov, true);
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /***********************************************************************
+         * 7. UI CONTROLLERS: SIDEBARS, DOSSIER TABS, QUIZ & TOUR BUILDER
+         ***********************************************************************/
+        function populateSelectDropdowns() {
+            const origSel = document.getElementById("select-origin");
+            const destSel = document.getElementById("select-destination");
+            origSel.innerHTML = "";
+            destSel.innerHTML = "";
+
+            PROVINCES_34.forEach(p => {
+                const opt1 = new Option(`${String(p.stt).padStart(2, '0')}. ${p.name}`, p.id);
+                const opt2 = new Option(`${String(p.stt).padStart(2, '0')}. ${p.name}`, p.id);
+                origSel.add(opt1);
+                destSel.add(opt2);
+            });
+
+            origSel.value = originProvince.id;
+            destSel.value = currentProvince.id;
+        }
+
+        function filterProvinceList() {
+            const q = document.getElementById("search-province").value.trim().toLowerCase();
+            const reg = document.getElementById("filter-region").value;
+            const container = document.getElementById("province-list-container");
+            container.innerHTML = "";
+
+            const filtered = PROVINCES_34.filter(p => {
+                const matchReg = reg === "ALL" || p.regionCode === reg;
+                const matchText = !q ||
+                    p.name.toLowerCase().includes(q) ||
+                    p.mergedFrom.toLowerCase().includes(q) ||
+                    p.hubs.some(h => h.name.toLowerCase().includes(q)) ||
+                    p.attractions.some(a => a.name.toLowerCase().includes(q));
+                return matchReg && matchText;
+            });
+
+            document.getElementById("filtered-count").textContent = `${filtered.length}/34 đơn vị`;
+
+            filtered.forEach(p => {
+                const isSelected = p.id === currentProvince.id;
+                const isStamped = stampedProvinces.has(p.id);
+                const item = document.createElement("div");
+                item.className = `glass-card p-2.5 rounded-xl cursor-pointer flex items-center justify-between gap-2 ${isSelected ? 'ring-2 ring-cyan-400 bg-cyan-950/60' : ''}`;
+                item.onclick = () => {
+                    playSfx("click");
+                    if (gameMode === "challenge") addProvinceToChallenge(p);
+                    selectProvince(p, true);
+                };
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-6 h-6 rounded-lg font-extrabold text-[11px] flex items-center justify-center text-slate-950 shrink-0 shadow" style="background:${p.color}">
+                            ${String(p.stt).padStart(2, '0')}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                                <span>${p.name}</span>
+                                ${isStamped ? '<i class="fa-solid fa-stamp text-emerald-400 text-[10px]" title="Đã đóng dấu Hộ chiếu"></i>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-300 truncate">${p.mergedFrom}</div>
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); quickTravelTo('${p.id}')" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-cyan-300 text-[10px] font-bold transition shrink-0" title="Di chuyển phương tiện 3D tới tỉnh này">
+                        <i class="fa-solid fa-route"></i> Đi
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function quickTravelTo(destId) {
+            const destP = PROVINCES_34.find(p => p.id === destId);
+            if (!destP) return;
+            selectProvince(destP, false);
+            document.getElementById("select-origin").value = originProvince.id;
+            document.getElementById("select-destination").value = destP.id;
+            launch3DJourney(originProvince, destP, currentTransportMode);
+        }
+
+        function selectProvince(prov, flyCam = true) {
+            currentProvince = prov;
+
+            // Highlight 3D Mesh elevation
+            PROVINCES_34.forEach(p => {
+                const m = provinceMeshMap[p.id];
+                if (!m) return;
+                if (p.id === prov.id) {
+                    m.userData.targetY = 0.55;
+                    m.material.emissive.setHex(0x1e40af);
+                } else {
+                    m.userData.targetY = 0;
+                    m.material.emissive.copy(m.userData.baseColor).multiplyScalar(0.08);
+                }
+            });
+
+            document.getElementById("select-destination").value = prov.id;
+            filterProvinceList();
+            renderDossierPanel();
+
+            if (flyCam) {
+                flyCameraToProvince(prov);
+            }
+        }
+
+        function switchDossierTab(tab) {
+            currentTab = tab;
+            ["attractions", "overview", "cuisine", "quiz"].forEach(t => {
+                const btn = document.getElementById(`dtab-${t}`);
+                if (t === tab) {
+                    btn.className = "py-2.5 text-center border-b-2 border-cyan-400 text-cyan-300 font-bold transition";
+                } else {
+                    btn.className = "py-2.5 text-center border-b-2 border-transparent text-slate-400 hover:text-white transition";
+                }
+            });
+            renderDossierPanel();
+        }
+
+        function renderDossierPanel() {
+            const p = currentProvince;
+            document.getElementById("dossier-code-badge").textContent = `ĐƠN VỊ ${String(p.stt).padStart(2, '0')}/34`;
+            document.getElementById("dossier-code-badge").style.backgroundColor = p.color;
+            document.getElementById("dossier-region-badge").textContent = p.regionName;
+
+            const isStamped = stampedProvinces.has(p.id);
+            document.getElementById("dossier-title").innerHTML = `
+                <span>${p.name.toUpperCase()}</span>
+                ${isStamped ? '<span class="text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded-full font-semibold"><i class="fa-solid fa-check-circle mr-1"></i>Đã đóng dấu</span>' : ''}
+            `;
+            document.getElementById("dossier-merged").textContent = p.mergedFrom;
+
+            // Render Hubs
+            const hubsBox = document.getElementById("dossier-hubs-list");
+            hubsBox.innerHTML = p.hubs.map(h =>
+                `<span class="px-2 py-0.5 rounded-md bg-slate-800 border border-amber-400/40 text-amber-300 text-[11px] font-semibold">⦿ ${h.name}</span>`
+            ).join("");
+
+            const content = document.getElementById("dossier-content");
+
+            if (currentTab === "attractions") {
+                content.innerHTML = `
+                    <div class="text-[11px] text-slate-300 mb-2 flex items-center justify-between">
+                        <span>Hệ thống Điểm du lịch trọng điểm theo cụm không gian:</span>
+                        <span class="text-cyan-300 font-semibold">${p.attractions.length} Cụm chính</span>
+                    </div>
+                    <div class="space-y-2.5">
+                        ${p.attractions.map((a, idx) => `
+                            <div class="glass-card p-3 rounded-xl border-l-4" style="border-left-color:${p.color}">
+                                <div class="text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-0.5">
+                                    <i class="fa-solid fa-layer-group mr-1"></i>${a.cluster}
+                                </div>
+                                <h4 class="text-xs font-extrabold text-white mb-1">${idx + 1}. ${a.name}</h4>
+                                <p class="text-[11px] text-slate-300 leading-relaxed">${a.desc}</p>
+                            </div>
+                        `).join("")}
+                    </div>
+                    <div class="mt-3 p-3 rounded-xl bg-cyan-950/50 border border-cyan-500/30">
+                        <div class="text-[11px] font-bold text-cyan-300 mb-1">
+                            <i class="fa-solid fa-lightbulb mr-1"></i>Gợi ý Thiết kế Tuyến & Liên kết Vùng:
+                        </div>
+                        <p class="text-[11px] text-slate-200">${p.routeAdvice}</p>
+                    </div>
+                `;
+            } else if (currentTab === "overview") {
+                content.innerHTML = `
+                    <div class="glass-card p-3 rounded-xl space-y-2">
+                        <div class="flex justify-between border-b border-slate-700/60 pb-1.5">
+                            <span class="text-slate-400">Tên đơn vị hành chính:</span>
+                            <strong class="text-white">${p.name}</strong>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700/60 pb-1.5">
+                            <span class="text-slate-400">Cấu trúc địa giới:</span>
+                            <strong class="text-amber-300 text-right">${p.mergedFrom}</strong>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700/60 pb-1.5">
+                            <span class="text-slate-400">Vùng du lịch:</span>
+                            <strong class="text-cyan-300 text-right">${p.regionName}</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Các tâm điểm đô thị:</span>
+                            <strong class="text-emerald-300">${p.hubs.map(h => h.name).join(", ")}</strong>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-3 rounded-xl">
+                        <h4 class="text-xs font-bold text-cyan-300 mb-2">
+                            <i class="fa-solid fa-road mr-1.5"></i>Hạ tầng Giao thông & Cửa ngõ Du lịch
+                        </h4>
+                        <ul class="space-y-1.5 text-[11px] text-slate-200">
+                            ${p.transport.map(t => `<li class="flex items-start gap-2"><i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i><span>${t}</span></li>`).join("")}
+                        </ul>
+                    </div>
+                `;
+            } else if (currentTab === "cuisine") {
+                content.innerHTML = `
+                    <div class="glass-card p-3.5 rounded-xl">
+                        <h4 class="text-xs font-bold text-amber-300 mb-2.5 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bowl-food"></i>
+                            <span>Đặc sản Ẩm thực & Quà tặng Du lịch (OCOP)</span>
+                        </h4>
+                        <div class="grid grid-cols-1 gap-2">
+                            ${p.cuisine.map(c => `
+                                <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-700/80 flex items-center gap-2.5">
+                                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center font-bold">🍜</span>
+                                    <span class="text-xs font-semibold text-white">${c}</span>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `;
+            } else if (currentTab === "quiz") {
+                content.innerHTML = `
+                    <div class="glass-card p-3.5 rounded-xl border border-amber-400/40">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-400 text-slate-950">CÂU HỎI NGHIỆP VỤ TUYẾN ĐIỂM</span>
+                            <span class="text-[11px] ${isStamped ? 'text-emerald-400' : 'text-slate-400'} font-semibold">
+                                ${isStamped ? '✓ Đã nhận dấu' : 'Chưa đóng dấu'}
+                            </span>
+                        </div>
+                        <p class="text-xs font-bold text-white mb-3 leading-relaxed">${p.quiz.q}</p>
+                        <div class="space-y-2">
+                            ${p.quiz.options.map((opt, idx) => `
+                                <button onclick="checkProvinceQuiz(${idx})" id="quiz-opt-${idx}" class="w-full text-left p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 transition flex items-center gap-2">
+                                    <span class="w-5 h-5 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0">${String.fromCharCode(65 + idx)}</span>
+                                    <span>${opt}</span>
+                                </button>
+                            `).join("")}
+                        </div>
+                        <div id="quiz-feedback" class="mt-3 p-2.5 rounded-xl text-xs hidden"></div>
+                    </div>
+                `;
+            }
+        }
+
+        function checkProvinceQuiz(selectedIndex) {
+            const p = currentProvince;
+            const fb = document.getElementById("quiz-feedback");
+            fb.classList.remove("hidden");
+
+            if (selectedIndex === p.quiz.ans) {
+                playSfx("stamp");
+                stampedProvinces.add(p.id);
+                updatePassportCounter();
+                fb.className = "mt-3 p-3 rounded-xl text-xs bg-emerald-950/90 border border-emerald-400 text-emerald-200";
+                fb.innerHTML = `<div class="font-extrabold text-emerald-300 mb-1"><i class="fa-solid fa-stamp mr-1"></i>CHÍNH XÁC! ĐÃ ĐÓNG DẤU HỘ CHIẾU ${p.name.toUpperCase()}</div><div>${p.quiz.explain}</div>`;
+                filterProvinceList();
+            } else {
+                playSfx("click");
+                fb.className = "mt-3 p-3 rounded-xl text-xs bg-rose-950/90 border border-rose-400 text-rose-200";
+                fb.innerHTML = `<div class="font-bold text-rose-300 mb-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>Chưa chính xác! Hãy xem lại tab Điểm đến hoặc Tổng quan.</div>`;
+            }
+        }
+
+        function updatePassportCounter() {
+            const count = stampedProvinces.size;
+            document.getElementById("passport-count-top").textContent = count;
+            document.getElementById("passport-modal-progress").textContent = `${count} / 34 Tỉnh`;
+
+            let rank = "Hướng dẫn viên Tập sự";
+            if (count >= 34) rank = "🏆 Đại sứ Tuyến điểm Du lịch Việt Nam (Hoàn thành 34/34)";
+            else if (count >= 20) rank = "🌟 Chuyên gia Điều hành Tour Xuyên Việt";
+            else if (count >= 10) rank = "🧭 Lữ hành gia Chuyên nghiệp";
+            document.getElementById("passport-rank").textContent = rank;
+        }
+
+        function togglePassportModal() {
+            const modal = document.getElementById("passport-modal");
+            if (modal.classList.contains("hidden")) {
+                renderPassportGrid();
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+            } else {
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+            }
+        }
+
+        function renderPassportGrid() {
+            updatePassportCounter();
+            const grid = document.getElementById("passport-grid");
+            grid.innerHTML = PROVINCES_34.map(p => {
+                const stamped = stampedProvinces.has(p.id);
+                return `
+                    <div onclick="togglePassportModal(); selectProvince(PROVINCES_34.find(x=>x.id==='${p.id}'), true); switchDossierTab('quiz');" class="p-3 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${stamped ? 'bg-emerald-950/50 border-emerald-400/60' : 'bg-slate-900/60 border-slate-700/70 opacity-75 hover:opacity-100'}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded text-slate-950" style="background:${p.color}">#${String(p.stt).padStart(2, '0')}</span>
+                            ${stamped ? '<i class="fa-solid fa-stamp text-emerald-400 text-base"></i>' : '<i class="fa-regular fa-circle text-slate-500 text-sm"></i>'}
+                        </div>
+                        <div class="mt-2">
+                            <div class="text-xs font-extrabold text-white">${p.name}</div>
+                            <div class="text-[10px] text-slate-400 truncate">${p.hubs.map(h => h.name).join(" • ")}</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function unlockAllStampsDemo() {
+            PROVINCES_34.forEach(p => stampedProvinces.add(p.id));
+            playSfx("stamp");
+            renderPassportGrid();
+            filterProvinceList();
+            renderDossierPanel();
+        }
+
+        /***********************************************************************
+         * 8. NORTHERN VIETNAMESE FEMALE TOUR GUIDE NARRATION SYSTEM
+         * - Dual-Engine: Neural Northern Female (HoaiMy / Google / Linh) + Cloud Stream Fallback
+         * - Phonetic Normalization: Eliminates abbreviations, lisp/slurring, and stutters
+         * - Professional Tour Guide Script + Live Subtitles
+         ***********************************************************************/
+        let voiceEngineMode = "auto_northern"; // 'auto_northern' | 'cloud_northern' | 'browser_female'
+        let voicePlaybackSpeed = 0.98;
+        let autoNarrateOnArrival = true;
+        let cachedVietnameseFemaleVoice = null;
+        let currentSpeechQueue = [];
+        let currentQueueIndex = 0;
+        let cloudAudioPlayer = new Audio();
+        let activeSpeechSessionId = 0;
+
+        // Scan and select the best Northern Vietnamese Female Voice (Hoài My / Google Tiếng Việt / Linh)
+        function detectNorthernVietnameseFemaleVoice() {
+            if (!("speechSynthesis" in window)) return null;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || voices.length === 0) return null;
+
+            const viVoices = voices.filter(v =>
+                v.lang.toLowerCase().includes("vi") ||
+                v.name.toLowerCase().includes("vietnam") ||
+                v.name.toLowerCase().includes("tiếng việt")
+            );
+
+            if (viVoices.length === 0) return null;
+
+            // Filter OUT explicitly male voices (e.g., Microsoft NamMinh, Male, Nam)
+            const femaleCandidates = viVoices.filter(v => {
+                const n = v.name.toLowerCase();
+                return !n.includes("namminh") && !n.includes("male") && !n.includes(" nam ");
+            });
+
+            const pool = femaleCandidates.length > 0 ? femaleCandidates : viVoices;
+
+            // Priority 1: Microsoft HoaiMy Online (Natural) - Standard Northern Vietnamese Female Voice
+            const hoaiMy = pool.find(v => v.name.toLowerCase().includes("hoaimy") || v.name.toLowerCase().includes("hoài my"));
+            if (hoaiMy) return hoaiMy;
+
+            // Priority 2: Google Tiếng Việt (Standard Clear Northern Female TTS)
+            const googleVi = pool.find(v => v.name.toLowerCase().includes("google"));
+            if (googleVi) return googleVi;
+
+            // Priority 3: Apple Linh (vi-VN Female) or any Natural/Online Female Vietnamese voice
+            const linhOrNatural = pool.find(v =>
+                v.name.toLowerCase().includes("linh") ||
+                v.name.toLowerCase().includes("natural") ||
+                v.name.toLowerCase().includes("female") ||
+                v.name.toLowerCase().includes("nữ")
+            );
+            if (linhOrNatural) return linhOrNatural;
+
+            return pool[0];
+        }
+
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                cachedVietnameseFemaleVoice = detectNorthernVietnameseFemaleVoice();
+                updateVoiceSelectorLabel();
+            };
+            setTimeout(() => {
+                cachedVietnameseFemaleVoice = detectNorthernVietnameseFemaleVoice();
+                updateVoiceSelectorLabel();
+            }, 300);
+        }
+
+        function updateVoiceSelectorLabel() {
+            const sel = document.getElementById("voice-engine-select");
+            if (!sel) return;
+            if (cachedVietnameseFemaleVoice) {
+                const shortName = cachedVietnameseFemaleVoice.name.includes("HoaiMy")
+                    ? "Hoài My - Chuẩn Hà Nội"
+                    : cachedVietnameseFemaleVoice.name.replace(/Microsoft |Online \(Natural\) - Vietnamese \(Vietnam\)/g, "").trim();
+                sel.options[0].textContent = `🎙️ Nữ HDV Miền Bắc (${shortName})`;
+            }
+        }
+
+        function changeVoiceEngine(mode) {
+            voiceEngineMode = mode;
+            if (isTourGuideSpeaking) {
+                speakProvinceGuide(true);
+            }
+        }
+
+        function changeVoiceSpeed(val) {
+            voicePlaybackSpeed = parseFloat(val) || 0.98;
+            if (isTourGuideSpeaking) {
+                speakProvinceGuide(true);
+            }
+        }
+
+        function toggleAutoNarrate(checked) {
+            autoNarrateOnArrival = checked;
+        }
+
+        // Normalize all abbreviations & symbols for crisp, articulate Northern Vietnamese diction
+        function normalizeVietnameseForTourGuide(rawText) {
+            if (!rawText) return "";
+            let t = rawText;
+
+            const replacements = [
+                [/\bTP\.\s*HCM\b/gi, "Thành phố Hồ Chí Minh"],
+                [/\bTP\.HCM\b/gi, "Thành phố Hồ Chí Minh"],
+                [/\bTP\.\s*/g, "Thành phố "],
+                [/\bTW\b/g, "Trung ương"],
+                [/\bVQG\b/g, "Vườn quốc gia"],
+                [/\bĐBSCL\b/g, "Đồng bằng sông Cửu Long"],
+                [/\bĐB\b/g, "Đồng bằng"],
+                [/\bQL(\d+[A-Z]?)\b/g, "Quốc lộ $1"],
+                [/\bUNESCO\b/g, "U-nét-xcô"],
+                [/\bASEAN\b/g, "A-xê-an"],
+                [/\bOCOP\b/g, "Ô-cốp"],
+                [/\bMICE\b/g, "Mai-xờ"],
+                [/\bGPS\s*0001\b/g, "Gờ Pê Ét không không không một"],
+                [/\bATK\b/g, "An toàn khu"],
+                [/\b4N3Đ\b/gi, "bốn ngày ba đêm"],
+                [/\+/g, " kết hợp cùng "],
+                [/➔|→/g, " kết nối đến "],
+                [/&/g, " và "],
+                [/\//g, " hoặc "],
+                [/\(([^)]+)\)/g, ", $1, "]
+            ];
+
+            replacements.forEach(([regex, rep]) => {
+                t = t.replace(regex, rep);
+            });
+
+            // Clean up multiple spaces and punctuation
+            t = t.replace(/\s+/g, " ").replace(/\s+,/g, ",").replace(/,+/g, ",").trim();
+            return t;
+        }
+
+        // Build an authentic, well-structured Northern Vietnamese Tour Guide narration script
+        function buildProfessionalTourGuideScript(prov) {
+            const cleanName = normalizeVietnameseForTourGuide(prov.name);
+            const cleanRegion = normalizeVietnameseForTourGuide(prov.regionName);
+
+            let mergerIntro = "";
+            if (prov.mergedFrom.toLowerCase().includes("giữ nguyên")) {
+                mergerIntro = `Đây là đơn vị hành chính giữ nguyên địa giới lịch sử, đóng vai trò trung tâm chiến lược của vùng ${cleanRegion}.`;
+            } else {
+                const mergedClean = normalizeVietnameseForTourGuide(prov.mergedFrom);
+                mergerIntro = `Về không gian hành chính mới, địa phương được tổ chức trên cơ sở ${mergedClean.toLowerCase()}, thuộc vùng ${cleanRegion}.`;
+            }
+
+            const hubsNames = prov.hubs.map(h => normalizeVietnameseForTourGuide(h.name)).join(" và ");
+            const hubSentence = prov.hubs.length > 1
+                ? `Các tâm điểm đô thị và trạm trung chuyển du lịch chính trên bản đồ gồm có: ${hubsNames}.`
+                : `Trung tâm hành chính và đầu mối giao thông trọng điểm đặt tại ${hubsNames}.`;
+
+            const attractionSentences = prov.attractions.map((a, idx) => {
+                const orderWord = idx === 0 ? "Trước hết, mời quý đoàn khám phá" : idx === 1 ? "Tiếp nối hành trình là" : "Điểm nhấn không thể bỏ qua tiếp theo là";
+                const cName = normalizeVietnameseForTourGuide(a.name);
+                const cDesc = normalizeVietnameseForTourGuide(a.desc);
+                return `${orderWord} ${cName}. ${cDesc}`;
+            });
+
+            const topCuisine = normalizeVietnameseForTourGuide(prov.cuisine.slice(0, 4).join(", "));
+            const routeTip = normalizeVietnameseForTourGuide(prov.routeAdvice);
+
+            return [
+                `Xin nồng nhiệt chào đón quý thầy cô và các bạn đã đặt chân đến ${cleanName}!`,
+                `${mergerIntro} ${hubSentence}`,
+                ...attractionSentences,
+                `Về định hướng thiết kế tuyến: ${routeTip}`,
+                `Dừng chân tại ${cleanName}, quý đoàn đừng quên thưởng thức các đặc sản nổi tiếng như: ${topCuisine}. Chúc quý đoàn có một chuyến khảo sát tuyến điểm thật nhiều trải nghiệm bổ ích!`
+            ];
+        }
+
+        // Split paragraphs into bite-sized natural sentences (<= 175 chars) for smooth streaming & subtitle sync
+        function splitIntoSpeakableChunks(paragraphs) {
+            const chunks = [];
+            paragraphs.forEach(para => {
+                const sentences = para.split(/(?<=[.!?])\s+/);
+                sentences.forEach(s => {
+                    const trimmed = s.trim();
+                    if (!trimmed) return;
+                    if (trimmed.length <= 175) {
+                        chunks.push(trimmed);
+                    } else {
+                        // Split by comma if sentence is very long
+                        const parts = trimmed.split(/,\s+/);
+                        let buf = "";
+                        parts.forEach(part => {
+                            if ((buf + ", " + part).length <= 170) {
+                                buf = buf ? `${buf}, ${part}` : part;
+                            } else {
+                                if (buf) chunks.push(buf + ".");
+                                buf = part;
+                            }
+                        });
+                        if (buf) chunks.push(buf);
+                    }
+                });
+            });
+            return chunks;
+        }
+
+        function stopTourGuideVoice() {
+            activeSpeechSessionId++;
+            isTourGuideSpeaking = false;
+            currentSpeechQueue = [];
+            currentQueueIndex = 0;
+
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (cloudAudioPlayer) {
+                cloudAudioPlayer.pause();
+                cloudAudioPlayer.src = "";
+            }
+
+            const subBox = document.getElementById("tour-guide-subtitle-box");
+            if (subBox) subBox.classList.add("hidden");
+
+            const stopBtn = document.getElementById("btn-voice-stop");
+            if (stopBtn) stopBtn.classList.add("hidden");
+
+            const label = document.getElementById("voice-guide-label");
+            if (label) label.textContent = "Thuyết minh (Nữ HDV Miền Bắc)";
+
+            const icon = document.getElementById("voice-guide-icon");
+            if (icon) icon.className = "fa-solid fa-microphone-lines";
+        }
+
+        function speakProvinceGuide(forceRestart = false) {
+            if (isTourGuideSpeaking && !forceRestart) {
+                stopTourGuideVoice();
+                return;
+            }
+
+            stopTourGuideVoice();
+            const sessionId = ++activeSpeechSessionId;
+            isTourGuideSpeaking = true;
+
+            const paragraphs = buildProfessionalTourGuideScript(currentProvince);
+            currentSpeechQueue = splitIntoSpeakableChunks(paragraphs);
+            currentQueueIndex = 0;
+
+            // Update UI Controls
+            document.getElementById("tour-guide-subtitle-box").classList.remove("hidden");
+            document.getElementById("btn-voice-stop").classList.remove("hidden");
+            document.getElementById("voice-guide-label").textContent = "Đang thuyết minh...";
+            document.getElementById("voice-guide-icon").className = "fa-solid fa-volume-high animate-pulse";
+
+            cachedVietnameseFemaleVoice = detectNorthernVietnameseFemaleVoice();
+            const useCloud = voiceEngineMode === "cloud_northern" ||
+                             (voiceEngineMode === "auto_northern" && !cachedVietnameseFemaleVoice);
+
+            const badge = document.getElementById("guide-voice-badge");
+            if (useCloud) {
+                badge.textContent = "Giọng Nữ Bắc (Cloud Chuẩn)";
+            } else if (cachedVietnameseFemaleVoice) {
+                badge.textContent = cachedVietnameseFemaleVoice.name.includes("HoaiMy")
+                    ? "Nữ Miền Bắc (Hoài My Neural)"
+                    : "Giọng Nữ Bắc Chuẩn";
+            } else {
+                badge.textContent = "Giọng Nữ Tiếng Việt";
+            }
+
+            playNextTourGuideChunk(sessionId, useCloud);
+        }
+
+        function playNextTourGuideChunk(sessionId, useCloud) {
+            if (sessionId !== activeSpeechSessionId || !isTourGuideSpeaking) return;
+
+            if (currentQueueIndex >= currentSpeechQueue.length) {
+                stopTourGuideVoice();
+                return;
+            }
+
+            const chunkText = currentSpeechQueue[currentQueueIndex];
+            const subTextEl = document.getElementById("tour-guide-subtitle-text");
+            if (subTextEl) {
+                subTextEl.innerHTML = `<span class="text-pink-300 font-bold mr-1">[${currentQueueIndex + 1}/${currentSpeechQueue.length}]</span> ${chunkText}`;
+            }
+
+            if (useCloud) {
+                playChunkViaCloudNorthernFemale(chunkText, sessionId);
+            } else {
+                playChunkViaWebSpeechFemale(chunkText, sessionId);
+            }
+        }
+
+        // Engine 1: Cloud Standard Northern Female Voice Stream (Fallback to WebSpeech if offline)
+        function playChunkViaCloudNorthernFemale(text, sessionId) {
+            const encoded = encodeURIComponent(text);
+            const url = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encoded}&tl=vi&client=tw-ob&ttsspeed=${voicePlaybackSpeed}`;
+
+            cloudAudioPlayer.src = url;
+            cloudAudioPlayer.playbackRate = voicePlaybackSpeed;
+
+            cloudAudioPlayer.onended = () => {
+                if (sessionId !== activeSpeechSessionId) return;
+                currentQueueIndex++;
+                setTimeout(() => playNextTourGuideChunk(sessionId, true), 140);
+            };
+
+            cloudAudioPlayer.onerror = () => {
+                // Seamless fallback to Browser Web Speech API if CORS/network blocks audio stream
+                if (sessionId !== activeSpeechSessionId) return;
+                playChunkViaWebSpeechFemale(text, sessionId);
+            };
+
+            const playPromise = cloudAudioPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    if (sessionId !== activeSpeechSessionId) return;
+                    playChunkViaWebSpeechFemale(text, sessionId);
+                });
+            }
+        }
+
+        // Engine 2: Browser Neural Northern Female Voice (Microsoft HoaiMy / Google Tiếng Việt / Linh)
+        function playChunkViaWebSpeechFemale(text, sessionId) {
+            if (!("speechSynthesis" in window)) {
+                stopTourGuideVoice();
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = "vi-VN";
+
+            const bestVoice = cachedVietnameseFemaleVoice || detectNorthernVietnameseFemaleVoice();
+            if (bestVoice) {
+                utter.voice = bestVoice;
+            }
+
+            // Calibrate pitch & rate for crisp, articulate Northern Female Tour Guide diction
+            utter.rate = voicePlaybackSpeed;
+            utter.pitch = bestVoice && bestVoice.name.includes("HoaiMy") ? 1.04 : 1.1;
+            utter.volume = 1.0;
+
+            utter.onend = () => {
+                if (sessionId !== activeSpeechSessionId) return;
+                currentQueueIndex++;
+                setTimeout(() => playNextTourGuideChunk(sessionId, false), 120);
+            };
+
+            utter.onerror = () => {
+                if (sessionId !== activeSpeechSessionId) return;
+                currentQueueIndex++;
+                setTimeout(() => playNextTourGuideChunk(sessionId, false), 120);
+            };
+
+            window.speechSynthesis.speak(utter);
+        }
+
+        function setTransportMode(mode) {
+            currentTransportMode = mode;
+            ["road", "air", "water"].forEach(m => {
+                const btn = document.getElementById(`trans-${m}`);
+                if (m === mode) {
+                    btn.className = "transport-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-cyan-400 bg-cyan-500/20 text-white flex flex-col items-center gap-0.5 transition";
+                } else {
+                    btn.className = "transport-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 flex flex-col items-center gap-0.5 transition hover:border-slate-500";
+                }
+            });
+        }
+
+        function toggleChaseCamera() {
+            chaseCameraActive = !chaseCameraActive;
+            updateChaseCamButton();
+        }
+
+        function updateChaseCamButton() {
+            const btn = document.getElementById("btn-chase-cam");
+            if (chaseCameraActive) {
+                btn.className = "px-2.5 py-2 rounded-xl border border-amber-400 bg-amber-500/25 text-amber-300 text-xs font-bold transition";
+            } else {
+                btn.className = "px-2.5 py-2 rounded-xl border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium hover:border-cyan-400 transition";
+            }
+        }
+
+        function toggleMapLabels() {
+            showMapLabels = !showMapLabels;
+            const container = document.getElementById("labels-container");
+            container.style.display = showMapLabels ? "block" : "none";
+        }
+
+        function toggleLeftSidebar() {
+            const sb = document.getElementById("left-sidebar");
+            sb.classList.toggle("-translate-x-[110%]");
+        }
+
+        /***********************************************************************
+         * 9. TOUR BUILDER CHALLENGE MODE
+         ***********************************************************************/
+        function switchGameMode(mode) {
+            gameMode = mode;
+            const btnExp = document.getElementById("mode-btn-explore");
+            const btnChal = document.getElementById("mode-btn-challenge");
+            const panel = document.getElementById("challenge-panel");
+
+            if (mode === "challenge") {
+                btnChal.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow";
+                btnExp.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-300 hover:text-white";
+                panel.classList.remove("hidden");
+                loadTourChallenge(currentChallengeIdx);
+                resetCameraOverview();
+            } else {
+                btnExp.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-cyan-600 text-white shadow";
+                btnChal.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-300 hover:text-white";
+                panel.classList.add("hidden");
+            }
+        }
+
+        function loadTourChallenge(idx) {
+            const ch = TOUR_CHALLENGES[idx];
+            challengeSelectedIds = [];
+            document.getElementById("challenge-title").textContent = ch.title;
+            document.getElementById("challenge-desc").textContent = ch.desc;
+            document.getElementById("challenge-feedback").classList.add("hidden");
+            renderChallengeSteps();
+        }
+
+        function nextTourChallenge() {
+            currentChallengeIdx = (currentChallengeIdx + 1) % TOUR_CHALLENGES.length;
+            loadTourChallenge(currentChallengeIdx);
+        }
+
+        function addProvinceToChallenge(prov) {
+            if (challengeSelectedIds.includes(prov.id)) return;
+            if (challengeSelectedIds.length >= 3) return;
+            challengeSelectedIds.push(prov.id);
+            renderChallengeSteps();
+
+            // Draw connecting line if 2 or more provinces selected
+            if (challengeSelectedIds.length >= 2) {
+                const pA = PROVINCES_34.find(p => p.id === challengeSelectedIds[challengeSelectedIds.length - 2]);
+                const pB = prov;
+                launch3DJourney(pA, pB, currentTransportMode);
+            }
+        }
+
+        function clearChallengeSelection() {
+            challengeSelectedIds = [];
+            renderChallengeSteps();
+            document.getElementById("challenge-feedback").classList.add("hidden");
+        }
+
+        function renderChallengeSteps() {
+            const box = document.getElementById("challenge-steps");
+            if (challengeSelectedIds.length === 0) {
+                box.innerHTML = `<span class="text-slate-400 italic">👉 Hãy bấm chọn lần lượt 3 tỉnh/thành trên bản đồ 3D...</span>`;
+                return;
+            }
+            box.innerHTML = challengeSelectedIds.map((id, i) => {
+                const p = PROVINCES_34.find(x => x.id === id);
+                return `<span class="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-200 font-bold">${i + 1}. ${p.name}</span>`;
+            }).join(' <i class="fa-solid fa-arrow-right text-amber-400"></i> ');
+        }
+
+        function verifyTourChallenge() {
+            const ch = TOUR_CHALLENGES[currentChallengeIdx];
+            const fb = document.getElementById("challenge-feedback");
+            fb.classList.remove("hidden");
+
+            const isMatch = ch.targetIds.length === challengeSelectedIds.length &&
+                            ch.targetIds.every(id => challengeSelectedIds.includes(id));
+
+            if (isMatch) {
+                playSfx("stamp");
+                ch.targetIds.forEach(id => stampedProvinces.add(id));
+                updatePassportCounter();
+                fb.className = "mt-2 text-xs font-bold text-emerald-300";
+                fb.innerHTML = `🎉 Tuyệt vời! Tuyến liên kết [${ch.targetNames.join(" ➔ ")}] hoàn toàn hợp lý về địa lý và tài nguyên du lịch! Đã tặng dấu Hộ chiếu cho cả 3 tỉnh.`;
+            } else {
+                fb.className = "mt-2 text-xs font-bold text-amber-300";
+                fb.innerHTML = `💡 Gợi ý đáp án chuẩn: ${ch.targetNames.join(" ➔ ")}. Hãy bấm 'Xóa' và chọn lại trên bản đồ!`;
+            }
+        }
+
+        /***********************************************************************
+         * 10. MAIN RENDER & ANIMATION LOOP
+         ***********************************************************************/
+        let clock = new THREE.Clock();
+
+        function animateLoop() {
+            requestAnimationFrame(animateLoop);
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+
+            // 1. Subtle Ocean Wave Animation
+            if (oceanMesh) {
+                oceanMesh.position.y = -0.35 + Math.sin(elapsed * 1.5) * 0.04;
+            }
+
+            // 2. Smooth Province Elevation on Hover/Select
+            provinceMeshes.forEach(m => {
+                if (m.userData.type === "province") {
+                    m.position.y += (m.userData.targetY - m.position.y) * 0.14;
+                }
+            });
+
+            // 3. Camera Fly-to Interpolation
+            if (camAnim.active && !chaseCameraActive) {
+                camAnim.progress += delta / camAnim.duration;
+                if (camAnim.progress >= 1) {
+                    camAnim.progress = 1;
+                    camAnim.active = false;
+                }
+                // Ease out cubic
+                const t = 1 - Math.pow(1 - camAnim.progress, 3);
+                camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, t);
+                controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, t);
+            }
+
+            // 4. Active 3D Vehicle Travel Along Route Curve
+            if (activeTravel.active && activeTravel.curve && activeTravel.vehicleMesh) {
+                activeTravel.progress += activeTravel.speed;
+                const progressBar = document.getElementById("telemetry-progress");
+                if (progressBar) {
+                    progressBar.style.width = `${Math.min(100, Math.round(activeTravel.progress * 100))}%`;
+                }
+
+                if (activeTravel.progress >= 1) {
+                    // Arrived at Destination Province
+                    activeTravel.progress = 1;
+                    activeTravel.active = false;
+                    originProvince = activeTravel.destination;
+                    document.getElementById("current-location-badge").textContent = `📍 Đang ở: ${originProvince.name}`;
+                    document.getElementById("select-origin").value = originProvince.id;
+                    document.getElementById("telemetry-status").textContent = `✅ Đã đến ${originProvince.name}! Nữ HDV bắt đầu thuyết minh tuyến điểm...`;
+                    playSfx("click");
+
+                    // Automatically trigger Female Northern Tour Guide Narration upon arrival
+                    if (autoNarrateOnArrival && gameMode === "explore") {
+                        selectProvince(originProvince, false);
+                        setTimeout(() => speakProvinceGuide(true), 350);
+                    }
+                } else {
+                    const pos = activeTravel.curve.getPointAt(activeTravel.progress);
+                    const lookAtPt = activeTravel.curve.getPointAt(Math.min(1, activeTravel.progress + 0.02));
+                    activeTravel.vehicleMesh.position.copy(pos);
+                    activeTravel.vehicleMesh.lookAt(lookAtPt);
+
+                    if (chaseCameraActive) {
+                        const camOffset = new THREE.Vector3(4.5, 5.5, 6.5);
+                        camera.position.lerp(pos.clone().add(camOffset), 0.1);
+                        controls.target.lerp(pos, 0.15);
+                    }
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+
+            // 5. Update 2D HTML Floating Labels Positions
+            if (showMapLabels) {
+                const halfW = window.innerWidth / 2;
+                const halfH = window.innerHeight / 2;
+                labelElements.forEach(item => {
+                    const v = item.pos.clone();
+                    v.project(camera);
+                    if (v.z > 1) {
+                        item.el.style.display = "none";
+                    } else {
+                        const x = (v.x * halfW) + halfW;
+                        const y = -(v.y * halfH) + halfH;
+                        item.el.style.display = "flex";
+                        item.el.style.left = `${x}px`;
+                        item.el.style.top = `${y}px`;
+                    }
+                });
+            }
+        }
+
+        // Initialize Everything on Window Load
+        window.onload = function () {
+            initThreeScene();
+            populateSelectDropdowns();
+            filterProvinceList();
+            selectProvince(PROVINCES_34[8], false); // Quảng Ninh highlighted initially
+            updatePassportCounter();
+            animateLoop();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Vietnam Tourism Route Master 3D",
+  "description": "3D interactive Vietnam tourism route simulator featuring the 34 provinces masterplan, multimodal transit, heritage passport, and voice guide.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
